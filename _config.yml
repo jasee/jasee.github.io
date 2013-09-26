@@ -4,9 +4,10 @@ permalink: /:categories/:year/:month/:day/:title
 
 exclude: [".rvmrc", ".rbenv-version", "README.md", "Rakefile", "changelog.md"]
 pygments: true
+# use redcarpet, for more see https://github.com/vmg/redcarpet
 markdown: redcarpet
 redcarpet:
-  extensions: ["hard_wrap"]
+  extensions: ["hard_wrap","autolink","tables","fenced_code_blocks","disable_indented_code_blocks","no_intra_emphasis","space_after_headers","underline"]
 
 # Themes are encouraged to use these universal variables 
 # so be sure to set them if your theme uses them.
