@@ -12,14 +12,13 @@ redcarpet:
 # Themes are encouraged to use these universal variables 
 # so be sure to set them if your theme uses them.
 #
-title : jasee的博客
-tagline: 擅长写诗和绘画，精通十以内加减法
+title: jasee的博客
+tagline : 擅长写诗和绘画，精通十以内加减法
 author :
   name : jasee
   email : jaseetao@gmail.com
   github : jasee
-  twitter : nulll
-  feedburner : nulll
+  weibo : justatree
 
 # The production_url is only used when full-domain names are needed
 # such as sitemap.txt 

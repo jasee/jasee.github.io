@@ -78,6 +78,13 @@
                   </a>
                 </li>
               {% endif %}                          
+              {% if site.author.weibo %}
+                <li>
+                  <a href="http://www.weibo.com/{{ site.author.weibo }}" class="zocial weibo icon" target="_blank">
+                  <span class="hidden-desktop">Weibo</span>
+                  </a>
+                </li>
+              {% endif %}                          
               {% if site.author.facebook %}
                 <li>
                   <a href="http://www.facebook.com/{{ site.author.facebook }}" class="zocial facebook icon" target="_blank">
