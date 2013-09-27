@@ -1,6 +1,6 @@
 ---
 layout: page
-title : Archive
+title : 文章列表
 header : Post Archive
 group: navigation
 ---
