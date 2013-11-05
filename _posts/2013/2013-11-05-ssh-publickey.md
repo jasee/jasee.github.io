@@ -114,7 +114,7 @@ da-op-test1,172.16.18.201 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6qgR3iT6jUaJrgOi5Z
 ```
 $ cat /etc/ssh/ssh_host_rsa_key.pub 
 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAxA+Hl1jQNHAWdnnBP9mawYxDgYwupHU5yhy5dfD5y8cmoFtmFhx9W8VDSlVMMqgXpTX/H8rsjDLmUHVgpceWT2Orwx9P9ih8iXaWJ/NbvDNzsX7KhLhWY2/VQTP4hjDNfOzwki+FeCW5rbRposWClHnt91/0sv3pOtkgm7JrbEn4N0V62KVYT+R0+TqOzLqZe88YTgVlxrFlvUdZt5EjhjkMDYgJ7rFe++IPKA/FE58zMpI1wrOZsKjyDYHcagfANEO3yhWV+9tXaUGl8i6db4STaCbblCSvj3mbyrtv3YAw8usGiiJyJ49RUa32DnJwI4JUw57+4+ltfF4Mq6WEIQ== 
-ssh da-op-test1 'cat /etc/ssh/ssh_host_rsa_key.pub '
+$ ssh da-op-test1 'cat /etc/ssh/ssh_host_rsa_key.pub '
 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6qgR3iT6jUaJrgOi5Z+QoGBr077ApYyhJh7NNmaM781KCbAwAUP0z4cJuuTqZQcbgZmh2o5R0pxYWPPfDBhDMMcBsKK3MP/uy6/t3/rIAq1VaFFva+sp1aG/m1C8iphZ2PKk8u6itIRFZle3FrADnP0zoLrjTgP9GfgGSN3DwCi1IPAAa3S7RWgKAXxhvWyhS1rYZF60G5M/UJGRNRg0C9fZUb8j3i+EHG8iPfvQcJc2sX7MWkYStWmuaAbhMY4/u3tApjb3jzCy0Q/Gj6im/dFhE1GraDoJg1QkvlsnbnuXUJ6hd3Zt35A20ibQIixi23uh6QQ4epmuK9MBcCTq+Q==
 ```
 
@@ -152,3 +152,7 @@ Host key verification failed.
 # 总结
 *一切皆文件*，信任关系的建立和维护都是围绕着认证过程对几个文件进行管理。
 
+*参考文章*
+1. http://blog.csdn.net/lenovo_/article/details/6800518
+2. http://ajianhappy.blog.51cto.com/1121318/772610
+3. http://www.cnblogs.com/elong2009/archive/2009/12/20/1628157.html
