@@ -30,12 +30,12 @@
   
   <div class="span4">
     <section>
-      <h4>发布日期</h4>
+      <h4>Published</h4>
       <div class="date"><span>{{ page.date | date_to_long_string }}</span></div>
     </section>
     {% if page.category %}
       <section>
-        <h4>分类</h4>
+        <h4>Category</h4>
         <span class="category">
           {{ page.category }}
         </span>
@@ -43,16 +43,12 @@
     {% endif %}     
     {% unless page.tags == empty %}
       <section>
-        <h4>标签</h4>
+        <h4>Tags</h4>
         <ul class="tag_box">
           {% assign tags_list = page.tags %}
           {% include JB/tags_list %}
         </ul>
       </section>
-    <section>
-      <br>
-      <br>
-      <wb:share-button appkey="3jdboi" addition="simple" type="button" ralateUid="1939939115"></wb:share-button>
     {% endunless %}         
   </div>
 </div>
