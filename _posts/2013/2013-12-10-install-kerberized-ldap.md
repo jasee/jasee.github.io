@@ -4,7 +4,7 @@ title: 安装kerberos化的openldap
 category: 统一认证平台
 tagline: kerberized openldap的无主备安装
 description: 正在测试统一认证平台的可行性，这篇文章记录了kerberized openldap的安装，后续会跟进单点登录、google OTP、主备及监控维护部分。
-tags: ["Kerberos","LDAP","openldap"]
+tags: ["Kerberos","LDAP","openldap","TLS"]
 ---
 {% include JB/setup %}
 
@@ -142,8 +142,118 @@ kadmin.local:  ktadd -k /usr/local/kerberos/var/krb5kdc/kadm5.keytab kadmin/admi
 # make install
 # 
 ```
+### 2. 配置TLS证书
+使用`yum install openssl`后，修改`/etc/pki/tls/openssl.cnf`，前后diff结果如下：
 
-### 2. 配置openldap
+```
+50c50
+< certificate   = $dir/cacert.pem       # The CA certificate
+---
+> certificate   = $dir/CA.crt           # The CA certificate
+55c55
+< private_key   = $dir/private/cakey.pem# The private key
+---
+> private_key   = $dir/private/CA.key# The private key
+135c135
+< #stateOrProvinceName_default  = Default Province
+---
+> stateOrProvinceName_default   = Default Province
+148c148
+< #organizationalUnitName_default       =
+---
+> organizationalUnitName_default        = Default Unit
+```
+使用以下一系列命令生成CA根证书及ldap的TLS证书，注意CN部分一定是ldap所在服务器全名。
+
+```
+# cd /etc/pki/CA
+# touch index.txt
+# echo 01 > serial
+# (umask 077; openssl genrsa -out private/CA.key)
+Generating RSA private key, 1024 bit long modulus
+..++++++
+..........++++++
+e is 65537 (0x10001)
+# openssl req -new -x509 -key private/CA.key > CA.crt
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [XX]:
+State or Province Name (full name) [Default Province]:
+Locality Name (eg, city) [Default City]:
+Organization Name (eg, company) [Default Company Ltd]:
+Organizational Unit Name (eg, section) [Default Unit]:
+Common Name (eg, your name or your server's hostname) []:tao02
+Email Address []:
+# openssl genrsa -out ldap.key
+Generating RSA private key, 1024 bit long modulus
+.....++++++
+.........++++++
+e is 65537 (0x10001)
+# openssl req -new -key ldap.key -out ldap.csr
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [XX]:
+State or Province Name (full name) [Default Province]:
+Locality Name (eg, city) [Default City]:
+Organization Name (eg, company) [Default Company Ltd]:
+Organizational Unit Name (eg, section) [Default Unit]:
+Common Name (eg, your name or your server's hostname) []:tao02
+Email Address []:
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:
+An optional company name []:
+# mkdir /usr/local/openldap/etc/openldap/certs
+# cp ldap.csr /usr/local/openldap/etc/openldap/certs/; cd /usr/local/openldap/etc/openldap/certs
+# openssl ca -in ldap.csr -out ldap.crt
+Using configuration from /etc/pki/tls/openssl.cnf
+Check that the request matches the signature
+Signature ok
+Certificate Details:
+        Serial Number: 1 (0x1)
+        Validity
+            Not Before: Dec 13 09:31:16 2013 GMT
+            Not After : Dec 13 09:31:16 2014 GMT
+        Subject:
+            countryName               = XX
+            stateOrProvinceName       = Default Province
+            organizationName          = Default Company Ltd
+            organizationalUnitName    = Default Unit
+            commonName                = tao02
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            Netscape Comment: 
+                OpenSSL Generated Certificate
+            X509v3 Subject Key Identifier: 
+                CC:88:38:0C:93:22:75:C8:BC:A2:7D:BD:13:3D:62:BF:B9:8E:39:A5
+            X509v3 Authority Key Identifier: 
+                keyid:29:F4:55:62:E6:EC:15:39:99:59:90:0F:1A:CD:D7:40:47:DA:96:54
+
+Certificate is to be certified until Dec 13 09:31:16 2014 GMT (365 days)
+Sign the certificate? [y/n]:y
+
+
+1 out of 1 certificate requests certified, commit? [y/n]y
+Write out database with 1 new entries
+Data Base Updated
+# cp /etc/pki/CA/CA.crt .
+# cp /etc/pki/CA/ldap.key .
+# rm ldap.csr 
+```
+
+### 3. 配置openldap
 生成ldap运行所用principal
 
 ```
@@ -185,7 +295,13 @@ kadmin:  ktadd -k /usr/local/openldap/etc/openldap/ldap.keytab ldap/tao02@DA.ADK
 > access to *
 >         by dn="uid=ldapadmin,ou=people,dc=da,dc=adk" write
 >         by * read
-54,55c79,80
+15a41,45
+> TLSCACertificateFile  /usr/local/openldap/etc/openldap/certs/CA.crt
+> TLSCertificateFile    /usr/local/openldap/etc/openldap/certs/ldap.crt
+> TLSCertificateKeyFile /usr/local/openldap/etc/openldap/certs/ldap.key
+> TLSVerifyClient               never
+> 
+54,55c84,85
 < suffix                "dc=my-domain,dc=com"
 < rootdn                "cn=Manager,dc=my-domain,dc=com"
 ---
@@ -206,7 +322,7 @@ cp /usr/local/openldap/etc/openldap/DB_CONFIG.example /usr/local/openldap/var/op
 # service rsyslog restart
 
 ```
-### 3. 启动openldap
+### 4. 启动openldap
 从其他地方找了一个启动脚本，修改保存为`/etc/init.d/slapd`，正式环境需要建立ldap账号而不是使用root。内容如下
 
 ```
@@ -449,7 +565,7 @@ exit $RETVAL
 service slapd start 
 ```
 
-### 4. 导入kerberos用户作为管理员，删除默认rootdn
+### 5. 导入kerberos用户作为管理员，删除默认rootdn
 建立`setup.ldif`文件，内容如下
 
 ```
@@ -487,8 +603,25 @@ loginShell: /sbin/nologin
 
 删除`slapd.conf`文件中的`rootdn`和`rootpw`两行并重启slpad服务。此时只有`ldapadmin@DA.ADK`具有管理权限。
 
-### 5. 测试
-可以使用`yum install openldap-clients`安装openldap客户端。
+### 6. 客户端安装及测试
+可以使用`yum install openldap-clients`安装openldap客户端，由于[openldap-clients-2.4.23-26开始使用moznss代替TLS][1]，为了继续使用TLS需要哈希化证书文件.
+
+```
+cd /etc/openldap
+rm -f certs/*
+scp tao02:/usr/local/openldap/etc/openldap/certs/CA.crt certs/
+cacertdir_rehash certs
+```
+
+修改`/etc/openldap/ldap.conf`以下两个配置
+
+```
+BASE    dc=da,dc=adk
+URI     ldap://tao02
+```
+
+此时执行`ldapsearch`及`ldapsearch -ZZ`应该能正常返回，说明LDAP及TLS正常。其他客户端安装可以分发配置和证书目录。`tao02`本身也应该安装客户端。
+
 在`tao01`上建立文件`test.ldif`
 
 ```
@@ -509,12 +642,12 @@ loginShell: /bin/bash
 
 ```
 # kdestroy 
-# ldapsearch -H ldap://tao02
+# ldapsearch
   SASL/GSSAPI authentication started
   ldap_sasl_interactive_bind_s: Local error (-2)
           additional info: SASL(-1): generic failure: GSSAPI Error: Unspecified GSS failure.  Minor code may provide more information (Credentials cache file '/tmp/krb5cc_0' not found)
 # kinit admin/admin
-# ldapsearch -H ldap://tao02
+# ldapsearch
   SASL/GSSAPI authentication started
   SASL username: admin/admin@DA.ADK
   SASL SSF: 56
@@ -532,13 +665,13 @@ loginShell: /bin/bash
   result: 32 No such object
   
   # numResponses: 1
-# ldapwhoami -h tao02
+# ldapwhoami
   SASL/GSSAPI authentication started
   SASL username: admin/admin@DA.ADK
   SASL SSF: 56
   SASL data security layer installed.
   dn:uid=admin/admin,ou=people,dc=da,dc=adk
-# ldapadd -h tao02 -f test.ldif 
+# ldapadd -f test.ldif 
   SASL/GSSAPI authentication started
   SASL username: admin/admin@DA.ADK
   SASL SSF: 56
@@ -547,13 +680,13 @@ loginShell: /bin/bash
   ldap_add: Insufficient access (50)
           additional info: no write access to parent
 # kinit ldapadmin
-# ldapadd -h tao02 -f test.ldif 
+# ldapadd -f test.ldif 
   SASL/GSSAPI authentication started
   SASL username: ldapadmin@DA.ADK
   SASL SSF: 56
   SASL data security layer installed.
   adding new entry "uid=test,ou=people,dc=da,dc=adk"
-# ldapsearch -h tao02 -b 'dc=da,dc=adk'
+# ldapsearch -b 'dc=da,dc=adk'
   SASL/GSSAPI authentication started
   SASL username: ldapadmin@DA.ADK
   SASL SSF: 56
@@ -616,15 +749,6 @@ loginShell: /bin/bash
 ```
 同时可以查看日志文件`tao01:/var/log/krb5kdc.log`及`tao02:/var/log/slapd.log`进行观察。
 
-### 6. 客户端安装配置
-使用`yum install openldap-clients`在每一台机器上安装openldap客户端。
-修改`/etc/openldap/ldap.conf`以下两个配置
-
-```
-BASE    dc=da,dc=adk
-URI     ldap://tao02
-```
-执行`ldapsearch`应该能得到与上小节执行`ldapsearch -h tao02 -b 'dc=da,dc=adk'`命令一样的结果。
 
 
 ### *参考文档*
@@ -633,3 +757,7 @@ URI     ldap://tao02
 *[Kerberos and LDAP](https://help.ubuntu.com/10.04/serverguide/kerberos-ldap.html)*
 *[OpenLDAP Software 2.4 Administrator's Guide](http://www.openldap.org/doc/admin24/OpenLDAP-Admin-Guide.pdf)*
 *[OpenLDAP在LINUX下的安装说明](http://www.cnblogs.com/kungfupanda/archive/2009/12/15/1564555.html)*
+*[RHEL6配置简单LDAP服务器基于TLS加密和NFS的用户家目录自动挂载](http://blog.sina.com.cn/s/blog_64aac6750101gwst.html)*
+*[Openldap集成tls/ssl](http://mosquito.blog.51cto.com/2973374/1098456)*
+
+[1]: http://unixadminschool.com/blog/2013/04/rhel-6-3-ldap-series-part-4-troubleshooting/
