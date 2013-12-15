@@ -8,13 +8,17 @@ tags: ["Kerberos","LDAP","openldap","TLS"]
 ---
 {% include JB/setup %}
 
-这是一系列`统一认证平台`测试安装记录的第一部分，记录了安装kerberos化的openldap服务的过程。后续文档将会逐步更新。
+### 说明
+[统一认证平台(一):安装kerberos化的openldap](http://opjasee.com/2013/12/10/install-kerberized-ldap/)
+[统一认证平台(二):使用LDAP进行登录认证](http://opjasee.com/2013/12/15/login-use-ldap/)
 
-### 安装环境
+本文记录了kerberos及openldap的安装过程，openldap使用kerberos及TLS。
 tao01-04，系统为Centos6.3，已完成hosts映射及root账号信任关系。
-tao01: kerberos
-tao02: openldap
+tao01: 本次安装kerberos
+tao02: 本次安装openldap
 tao03、04: 本次只作为客户端
+
+------
 
 ## 安装kerberos(tao01)
 ### 1. 下载kerberos，解压并安装，安装时最新版本是`krb5-1.11.1`
@@ -127,6 +131,8 @@ kadmin.local:  ktadd -k /usr/local/kerberos/var/krb5kdc/kadm5.keytab kadmin/admi
 ```
 # for x in  tao0{2,3,4}; do scp /etc/krb5.conf $x:/etc/; done
 ```
+
+------
 
 ## 安装openldap(tao02)
 ### 1. 下载openldap并解压安装，安装时最新版本是`openldap-2.4.38`
