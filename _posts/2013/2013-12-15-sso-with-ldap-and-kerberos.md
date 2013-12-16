@@ -1,22 +1,22 @@
 ---
 layout: post
-title: 使用LDAP进行登录认证
+title: 使用LDAP及Kerberos进行单点登录
 category: 统一认证平台
 tagline: 允许LDAP用户登录服务器并使用位于NFS上的家目录
-description: 正在测试统一认证平台的可行性，这篇文章记录了如何使用LDAP进行认证登录，待跟进单点登录、autofs、google OTP、主备及监控维护等。
-tags: ["Kerberos","LDAP","SSH","NFS"]
+description: 正在测试统一认证平台的可行性，这篇文章记录了如何使用LDAP进行认证登录及单点登录，后续跟进autofs、google OTP、主备及监控维护等。
+tags: ["Kerberos","LDAP","SSH","NFS","单点登录","SSO"]
 ---
 {% include JB/setup %}
 
 ### 说明
 [统一认证平台(一):安装kerberos化的openldap](http://opjasee.com/2013/12/10/install-kerberized-ldap/)
-[统一认证平台(二):使用LDAP进行登录认证](http://opjasee.com/2013/12/15/login-use-ldap/)
+[统一认证平台(二):使用LDAP及Kerberos进行单点登录](http://opjasee.com/2013/12/15/sso-with-ldap-and-kerberos/)
 
-本文记录`tao03`允许使用LDAP进行登录的配置过程，包括建立NFS存放用户家目录。
+本文记录`tao03`允许使用Kerberos及LDAP进行认证及登录的配置过程，包括建立NFS存放用户家目录，并配置SSH进行单点登录。
 tao01-04，系统为Centos6.3，已完成kerberized ldap搭建。
 tao01: 已经安装kerberos
 tao02: 已经安装openldap，本次安装NFS
-tao03: 本次作为被登录服务器
+tao03: 本次作为服务端
 tao04: 本次作为客户端
 
 ------
@@ -33,7 +33,7 @@ kadmin:  addprinc test@DA.ADK
 可以使用`kinit test`及`ldapwhoami`测试一下。后续我们使用这个用户进行登录测试。
 
 ### 2. 服务端认证方式变更(tao03)
-因为准备使用系统自带的`authconfig`命令(authconfig-tui不大适用未来使用)进行配置，为了追踪接下来执行命令的实际效果，我们先建立一个文件作为时间标记，然后看看`authconfig`这个命令干了些啥，方便以后进行配置及跟踪。
+因为认证相关的很多配置文件里赤裸裸的写着`User changes will be destroyed the next time authconfig is run.`，我们也就不手工修改了，使用系统提供的接口命令`authconfig`(authconfig-tui不大适用未来使用)进行配置吧，为了追踪接下来执行命令的实际效果，我们先建立一个文件作为时间标记，然后看看`authconfig`这个命令干了些啥，方便以后进行配置及跟踪。
 
 ```
 # yum install pam_ldap nss-pam-ldapd
@@ -195,10 +195,10 @@ adding new entry "cn=testgroup,ou=group,dc=da,dc=adk"
 ```
 
 ### 5. 新用户登录自动创建家目录
-在`tao03`的`/etc/pam.d/system-auth`和`/etc/pam.d/password-auth`都增加一行
+在`tao03`上执行
 
 ```
-session     required      pam_mkhomedir.so skel=/etc/skel umask=0022
+# authconfig --enablemkhomedir  --update
 ```
 
 尝试从`tao04`登录，可以看到上述的几个问题都消失了，但是还是需要输入密码，下次再进行单点登录测试。
@@ -206,7 +206,7 @@ session     required      pam_mkhomedir.so skel=/etc/skel umask=0022
 ```
 # ssh test@tao03
 test@tao03's password: 
-Creating directory '/home/nfsdir/user/test'.
+Creating home directory for test.
 Last login: Sun Dec 15 15:47:33 2013 from tao04
 [test@tao03 ~]$ pwd
 /home/nfsdir/user/test
@@ -223,12 +223,69 @@ drwxr-xr-x 3 root root      4096 Dec 15 15:49 ..
 -rw------- 1 test testgroup  584 Dec 15 15:52 .viminfo
 ```
 
+通过上面的操作，已经能够让系统使用kerberos进行认证并从ldap中获取用户属性信息，完成登录，但是还存在两个问题。
+
+1. 需要输入密码进行认证，每次登录输入的密码将在网络上传输至`tao03`，`tao03`以客户端的方式向kerberos验证密码是否正确，这样显然不是最安全的。
+2. 每次登录都需要输入密码，无法一次登录处处通行。
+
+下面我们将分别解决这两个问题。
+
+### 6. 配置SSH实现票据登录
+
+Kerberos这个名字起源于希腊神话中地狱看门三头犬，实现kerberos验证也就需要三方参与，目前我们已经有了KDC和test用户，缺少的就是SSH的服务端。通过下面的配置添加SSH所需的`host principal`，使SSH可以使用GSSAPI。
+
+```
+# kinit admin/admin
+# kadmin
+kadmin:  addprinc -randkey host/tao03@DA.ADK
+kadmin:  ktadd host/tao03@DA.ADK
+```
+
+此时`test`用户就可以使用自己第一次登录时获得的TGT向KDC请求SSH登录的票据了，TGT有效期间不需要再次输入密码。
+
+```
+# kinit test
+# klist 
+Ticket cache: FILE:/tmp/krb5cc_0
+Default principal: test@DA.ADK
+
+Valid starting     Expires            Service principal
+12/15/13 23:20:24  12/16/13 23:20:24  krbtgt/DA.ADK@DA.ADK
+        renew until 12/15/13 23:20:24
+# ssh test@tao03
+Last login: Sun Dec 15 23:05:12 2013 from tao03
+[test@tao03 ~]$ klist 
+klist: No credentials cache found (ticket cache FILE:/tmp/krb5cc_1002)
+```
+
+### 7. 配置票据转发，实现单点登录
+从上面的登录结果可以看出，获取TGT之后，虽然从`tao04`上登录`tao03`不再需要输入密码，但是TGT不能继承，用户在`tao03`上依然无法直接继续使用kerberized服务。通过两项配置可以实现`TGT forwarding`进行单点登录。
+
+1. 生成`forwardable TGT`。我们已经在`/etc/krb5.conf`中配置了`forwardable = true`，所以不再需要使用`kinit`命令的`-f`选项，直接生成即可。可用`klist -f`查看`flag`。
+2. 配置SSH进行转发。需要配置`/etc/ssh/ssh_config`，设定`GSSAPIDelegateCredentials yes`，在不存在`~/.ssh/config·文件的情况下，SSH客户端默认使用该配置文件。
+
+进行登录测试，可以看出，在登录`tao03`的时候已经生成了新的`TGT`，这样就完成了单点登录。新TGT由于不是使用`kinit`命令直接生成的，而是伴随着此次登录会话传递而来，因此本地缓存不是`/tmp/krb5cc_1002`(1002是uid)，名称中包含了会话ID，该凭据将在会话结束时消失。
+
+```
+# ssh test@tao03
+Last login: Sun Dec 15 23:21:57 2013 from tao04
+[test@tao03 ~]$ klist 
+Ticket cache: FILE:/tmp/krb5cc_1002_zbJKf29577
+Default principal: test@DA.ADK
+
+Valid starting     Expires            Service principal
+12/15/13 23:38:09  12/16/13 23:20:24  krbtgt/DA.ADK@DA.ADK
+        renew until 12/15/13 23:20:24
+```
 
 
-### 参考文档
-[关于 nscd，nslcd 和 sssd 套件的综述](http://webcache.googleusercontent.com/search?q=cache:yXvZKKIwyEkJ:chengkinhung.blogspot.com/2012/08/nscdnslcd-sssd.html+&cd=3&hl=zh-CN&ct=clnk&gl=cn)
-[RHEL6配置简单LDAP服务器基于TLS加密和NFS的用户家目录自动挂载](http://blog.sina.com.cn/s/blog_64aac6750101gwst.html)
-[NFS服务器及autofs搭建](http://blog.sina.com.cn/s/blog_5fc3a8b60100w637.html)
+### *参考文档*
+*[关于 nscd，nslcd 和 sssd 套件的综述](http://webcache.googleusercontent.com/search?q=cache:yXvZKKIwyEkJ:chengkinhung.blogspot.com/2012/08/nscdnslcd-sssd.html+&cd=3&hl=zh-CN&ct=clnk&gl=cn)*
+*[RHEL6配置简单LDAP服务器基于TLS加密和NFS的用户家目录自动挂载](http://blog.sina.com.cn/s/blog_64aac6750101gwst.html)*
+*[NFS服务器及autofs搭建](http://blog.sina.com.cn/s/blog_5fc3a8b60100w637.html)*
+*[使用OpenLDAP集中管理用户帐号](http://www.ibm.com/developerworks/cn/linux/l-openldap/)*
+*[Passing Kerberos TGT (ticket-granting ticket) to remote hosts with ssh](http://blog.asteriosk.gr/2009/11/18/passing-kerberos-tgt-ticket-granting-ticket-to-remote-hosts-withopenssh/)*
+*[Kerberos验证过程](http://www.cnblogs.com/xwdreamer/archive/2012/08/21/2649601.html)*
 
 
 [1]:(http://www.361way.com/nfs-mount-nobody/2616.html)

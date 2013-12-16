@@ -10,7 +10,7 @@ tags: ["Kerberos","LDAP","openldap","TLS"]
 
 ### 说明
 [统一认证平台(一):安装kerberos化的openldap](http://opjasee.com/2013/12/10/install-kerberized-ldap/)
-[统一认证平台(二):使用LDAP进行登录认证](http://opjasee.com/2013/12/15/login-use-ldap/)
+[统一认证平台(二):使用LDAP及Kerberos进行单点登录](http://opjasee.com/2013/12/15/sso-with-ldap-and-kerberos/)
 
 本文记录了kerberos及openldap的安装过程，openldap使用kerberos及TLS。
 tao01-04，系统为Centos6.3，已完成hosts映射及root账号信任关系。
@@ -313,6 +313,12 @@ kadmin:  ktadd -k /usr/local/openldap/etc/openldap/ldap.keytab ldap/tao02@DA.ADK
 ---
 > suffix "dc=da,dc=adk"
 > rootdn "cn=admin,dc=da,dc=adk"
+65a96,100
+> index uid             eq
+> index uidNumber       eq
+> index uniqueMember    eq
+> index gidNumber       eq
+> index memberUid       eq
 ```
 
 设置库配置
@@ -765,5 +771,6 @@ loginShell: /bin/bash
 *[OpenLDAP在LINUX下的安装说明](http://www.cnblogs.com/kungfupanda/archive/2009/12/15/1564555.html)*
 *[RHEL6配置简单LDAP服务器基于TLS加密和NFS的用户家目录自动挂载](http://blog.sina.com.cn/s/blog_64aac6750101gwst.html)*
 *[Openldap集成tls/ssl](http://mosquito.blog.51cto.com/2973374/1098456)*
+*[HOWTO solve OpenLDAP bdb_equality_candidates errors](http://blog.remibergsma.com/2012/03/05/howto-solve-openldap-bdb_equality_candidates-errors/)*
 
 [1]: http://unixadminschool.com/blog/2013/04/rhel-6-3-ldap-series-part-4-troubleshooting/
