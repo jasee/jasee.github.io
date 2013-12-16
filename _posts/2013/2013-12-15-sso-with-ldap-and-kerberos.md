@@ -232,7 +232,7 @@ drwxr-xr-x 3 root root      4096 Dec 15 15:49 ..
 
 ### 6. 配置SSH实现票据登录
 
-Kerberos这个名字起源于希腊神话中地狱看门三头犬，实现kerberos验证也就需要三方参与，目前我们已经有了KDC和test用户，缺少的就是SSH的服务端。通过下面的配置添加SSH所需的`host principal`，使SSH可以使用GSSAPI。
+Kerberos这个名字起源于希腊神话中地狱看门三头犬，实现kerberos验证也就需要三方参与，目前我们已经有了KDC和test用户，缺少的就是SSH的服务端。通过下面的配置在`tao03`添加SSH所需的`host principal`，使SSH可以使用GSSAPI。
 
 ```
 # kinit admin/admin
