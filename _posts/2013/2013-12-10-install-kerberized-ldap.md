@@ -3,14 +3,14 @@ layout: post
 title: 安装kerberos化的openldap
 category: 统一认证平台
 tagline: kerberized openldap的无主备安装
-description: 正在测试统一认证平台的可行性，这篇文章记录了kerberized openldap的安装，后续会跟进单点登录、google OTP、主备及监控维护部分。
+description: 本文记录了kerberos及openldap的安装过程，openldap使用kerberos及TLS。
 tags: ["Kerberos","LDAP","openldap","TLS"]
 ---
 {% include JB/setup %}
 
 ### 说明
-[统一认证平台(一):安装kerberos化的openldap](http://opjasee.com/2013/12/10/install-kerberized-ldap/)
-[统一认证平台(二):使用LDAP及Kerberos进行单点登录](http://opjasee.com/2013/12/15/sso-with-ldap-and-kerberos/)
+[统一认证平台(一):安装kerberos化的openldap](/2013/12/10/install-kerberized-ldap/)
+[统一认证平台(二):使用LDAP及Kerberos进行单点登录](/2013/12/15/sso-with-ldap-and-kerberos/)
 
 本文记录了kerberos及openldap的安装过程，openldap使用kerberos及TLS。
 tao01-04，系统为Centos6.3，已完成hosts映射及root账号信任关系。
@@ -23,16 +23,16 @@ tao03、04: 本次只作为客户端
 ## 安装kerberos(tao01)
 ### 1. 下载kerberos，解压并安装，安装时最新版本是`krb5-1.11.1`
 
-```
-wget http://web.mit.edu/kerberos/dist/krb5/1.11/krb5-1.11.1-signed.tar
-tar -xf  krb5-1.11.1-signed.tar
-tar -zxf krb5-1.11.1.tar.gz
-cd krb5-1.11.1
-mkdir centos6.3
-cd centos6.3
-../src/configure --prefix=/usr/local/kerberos
-make
-make install
+``` sh
+$ wget http://web.mit.edu/kerberos/dist/krb5/1.11/krb5-1.11.1-signed.tar
+$ tar -xf  krb5-1.11.1-signed.tar
+$ tar -zxf krb5-1.11.1.tar.gz
+$ cd krb5-1.11.1
+$ mkdir centos6.3
+$ cd centos6.3
+$ ../src/configure --prefix=/usr/local/kerberos
+$ make
+$ make install
 ```
 
 ### 2. 配置kerberos，三个配置文件如下
@@ -100,15 +100,16 @@ make install
 
 ### 3. 初始化KDC数据库
 
+``` sh
+$ /usr/local/kerberos/sbin/kdb5_util create -r DA.ADK -s
 ```
-/usr/local/kerberos/sbin/kdb5_util create -r DA.ADK -s
-```
+
 *出现`Loading random data`的时候另开个终端执行点消耗CPU的命令如`for x in $(seq 10000000);do s=$((s+x));done;echo $s`可以加快随机数采集。*
 输入的密码一定不要忘记，这个步骤执行完`/usr/local/kerberos/var/krb5kdc`目录下会产生四个文件和一个点文件。
 ### 4. 添加kdc数据库管理员及生成admin_keytab
 
-```
-# /usr/local/kerberos/sbin/kadmin.local
+``` sh
+$ /usr/local/kerberos/sbin/kadmin.local
 kadmin.local:  addprinc admin/admin@DA.ADK
 kadmin.local:  listprincs
 kadmin.local:  ktadd -k /usr/local/kerberos/var/krb5kdc/kadm5.keytab kadmin/admin@DA.ADK kadmin/changepw@DA.ADK
@@ -116,11 +117,11 @@ kadmin.local:  ktadd -k /usr/local/kerberos/var/krb5kdc/kadm5.keytab kadmin/admi
 
 ### 5. 启动服务查看日志
 
-```
-# /usr/local/kerberos/sbin/krb5kdc
-# /usr/local/kerberos/sbin/kadmind
-# cat /var/log/krb5kdc.log
-# cat /var/log/kadmind.log
+``` sh
+$ /usr/local/kerberos/sbin/krb5kdc
+$ /usr/local/kerberos/sbin/kadmind
+$ cat /var/log/krb5kdc.log
+$ cat /var/log/kadmind.log
 ```
 
 `kadmind.log`中出现`Seeding random number generator`时，这时候kadmin是无法连上的，会报`GSS-API (or Kerberos) error while initializing kadmin interface`，得等几分钟或执行一些耗CPU的命令加快随机数采集，日志刷新后方能正常连接。
@@ -128,8 +129,8 @@ kadmin.local:  ktadd -k /usr/local/kerberos/var/krb5kdc/kadm5.keytab kadmin/admi
 ### 6. kerberos客户端配置
 `Centos6.3`已经具有kerberos客户端，不需额外安装，只需要分发配置文件
 
-```
-# for x in  tao0{2,3,4}; do scp /etc/krb5.conf $x:/etc/; done
+``` sh
+$ for x in  tao0{2,3,4}; do scp /etc/krb5.conf $x:/etc/; done
 ```
 
 ------
@@ -137,16 +138,16 @@ kadmin.local:  ktadd -k /usr/local/kerberos/var/krb5kdc/kadm5.keytab kadmin/admi
 ## 安装openldap(tao02)
 ### 1. 下载openldap并解压安装，安装时最新版本是`openldap-2.4.38`
 
-```
-# yum install db4 db4-utils db4-devel cyrus-sasl*
-# wget ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/openldap-2.4.38.tgz
-# tar -zxf openldap-2.4.38.tgz
-# cd openldap-2.4.38
-# ./configure --prefix=/usr/local/openldap --with-cyrus-sasl
-# make depend
-# make
-# make install
-# 
+``` sh
+$ yum install db4 db4-utils db4-devel cyrus-sasl*
+$ wget ftp://ftp.openldap.org/pub/OpenLDAP/openldap-release/openldap-2.4.38.tgz
+$ tar -zxf openldap-2.4.38.tgz
+$ cd openldap-2.4.38
+$ ./configure --prefix=/usr/local/openldap --with-cyrus-sasl
+$ make depend
+$ make
+$ make install
+$ 
 ```
 ### 2. 配置TLS证书
 使用`yum install openssl`后，修改`/etc/pki/tls/openssl.cnf`，前后diff结果如下：
@@ -171,11 +172,11 @@ kadmin.local:  ktadd -k /usr/local/kerberos/var/krb5kdc/kadm5.keytab kadmin/admi
 ```
 使用以下一系列命令生成CA根证书及ldap的TLS证书，注意CN部分一定是ldap所在服务器全名。
 
-```
-# cd /etc/pki/CA
-# touch index.txt
-# echo 01 > serial
-# (umask 077; openssl genrsa -out private/CA.key)
+``` sh
+$ cd /etc/pki/CA
+$ touch index.txt
+$ echo 01 > serial
+$ (umask 077; openssl genrsa -out private/CA.key)
 Generating RSA private key, 1024 bit long modulus
 ..++++++
 ..........++++++
@@ -195,12 +196,12 @@ Organization Name (eg, company) [Default Company Ltd]:
 Organizational Unit Name (eg, section) [Default Unit]:
 Common Name (eg, your name or your server's hostname) []:tao02
 Email Address []:
-# openssl genrsa -out ldap.key
+$ openssl genrsa -out ldap.key
 Generating RSA private key, 1024 bit long modulus
 .....++++++
 .........++++++
 e is 65537 (0x10001)
-# openssl req -new -key ldap.key -out ldap.csr
+$ openssl req -new -key ldap.key -out ldap.csr
 You are about to be asked to enter information that will be incorporated
 into your certificate request.
 What you are about to enter is what is called a Distinguished Name or a DN.
@@ -220,9 +221,9 @@ Please enter the following 'extra' attributes
 to be sent with your certificate request
 A challenge password []:
 An optional company name []:
-# mkdir /usr/local/openldap/etc/openldap/certs
-# cp ldap.csr /usr/local/openldap/etc/openldap/certs/; cd /usr/local/openldap/etc/openldap/certs
-# openssl ca -in ldap.csr -out ldap.crt
+$ mkdir /usr/local/openldap/etc/openldap/certs
+$ cp ldap.csr /usr/local/openldap/etc/openldap/certs/; cd /usr/local/openldap/etc/openldap/certs
+$ openssl ca -in ldap.csr -out ldap.crt
 Using configuration from /etc/pki/tls/openssl.cnf
 Check that the request matches the signature
 Signature ok
@@ -254,17 +255,17 @@ Sign the certificate? [y/n]:y
 1 out of 1 certificate requests certified, commit? [y/n]y
 Write out database with 1 new entries
 Data Base Updated
-# cp /etc/pki/CA/CA.crt .
-# cp /etc/pki/CA/ldap.key .
-# rm ldap.csr 
+$ cp /etc/pki/CA/CA.crt .
+$ cp /etc/pki/CA/ldap.key .
+$ rm ldap.csr 
 ```
 
 ### 3. 配置openldap
 生成ldap运行所用principal
 
-```
-# kinit admin/admin
-# kadmin
+``` sh
+$ kinit admin/admin
+$ kadmin
 kadmin:  addprinc ldapadmin@DA.ADK
 kadmin:  addprinc -randkey ldap/tao02@DA.ADK
 kadmin:  ktadd -k /usr/local/openldap/etc/openldap/ldap.keytab ldap/tao02@DA.ADK
@@ -323,21 +324,21 @@ kadmin:  ktadd -k /usr/local/openldap/etc/openldap/ldap.keytab ldap/tao02@DA.ADK
 
 设置库配置
 
-```
-cp /usr/local/openldap/etc/openldap/DB_CONFIG.example /usr/local/openldap/var/openldap-data/DB_CONFIG
+``` sh
+$ cp /usr/local/openldap/etc/openldap/DB_CONFIG.example /usr/local/openldap/var/openldap-data/DB_CONFIG
 ```
 
 修改`/etc/rsyslog.conf`，将slapd运行日志单独指定
 
-```
-# echo 'local4.* /var/log/slapd.log' >> /etc/rsyslog.conf
-# service rsyslog restart
+``` sh
+$ echo 'local4.* /var/log/slapd.log' >> /etc/rsyslog.conf
+$ service rsyslog restart
 
 ```
 ### 4. 启动openldap
 从其他地方找了一个启动脚本，修改保存为`/etc/init.d/slapd`，正式环境需要建立ldap账号而不是使用root。内容如下
 
-```
+``` sh
 #!/bin/bash
 
 # Source function library.
@@ -573,8 +574,8 @@ exit $RETVAL
 ```
 使用以下命令启动slapd服务并观察`/var/log/slapd.log `日志
 
-```
-service slapd start 
+``` sh
+$ service slapd start 
 ```
 
 ### 5. 导入kerberos用户作为管理员，删除默认rootdn
@@ -609,8 +610,8 @@ loginShell: /sbin/nologin
 
 导入数据库，密码是配置文件中的`secret`
 
-```
-/usr/local/openldap/bin/ldapadd -x -D "cn=admin,dc=da,dc=adk" -W -f setup.ldif
+``` sh
+$ /usr/local/openldap/bin/ldapadd -x -D "cn=admin,dc=da,dc=adk" -W -f setup.ldif
 ```
 
 删除`slapd.conf`文件中的`rootdn`和`rootpw`两行并重启slpad服务。此时只有`ldapadmin@DA.ADK`具有管理权限。
@@ -618,11 +619,10 @@ loginShell: /sbin/nologin
 ### 6. 客户端安装及测试
 可以使用`yum install openldap-clients`安装openldap客户端，由于[openldap-clients-2.4.23-26开始使用moznss代替TLS][1]，为了继续使用TLS需要哈希化证书文件.
 
-```
-cd /etc/openldap
-rm -f certs/*
-scp tao02:/usr/local/openldap/etc/openldap/certs/CA.crt certs/
-cacertdir_rehash certs
+``` sh
+$ cd /etc/openldap
+$ scp tao02:/usr/local/openldap/etc/openldap/certs/CA.crt cacerts/
+$ cacertdir_rehash cacerts
 ```
 
 修改`/etc/openldap/ldap.conf`以下两个配置
@@ -650,118 +650,119 @@ homeDirectory: /home/test
 loginShell: /bin/bash
 ```
 
-在`tao01`上执行以下命令应该有类似输出(输出结果额外增加了两格缩进)
+在`tao01`上执行以下命令应该有类似输出
 
-```
-# kdestroy 
-# ldapsearch
-  SASL/GSSAPI authentication started
-  ldap_sasl_interactive_bind_s: Local error (-2)
-          additional info: SASL(-1): generic failure: GSSAPI Error: Unspecified GSS failure.  Minor code may provide more information (Credentials cache file '/tmp/krb5cc_0' not found)
-# kinit admin/admin
-# ldapsearch
-  SASL/GSSAPI authentication started
-  SASL username: admin/admin@DA.ADK
-  SASL SSF: 56
-  SASL data security layer installed.
-  # extended LDIF
-  #
-  # LDAPv3
-  # base <> (default) with scope subtree
-  # filter: (objectclass=*)
-  # requesting: ALL
-  #
-  
-  # search result
-  search: 5
-  result: 32 No such object
-  
-  # numResponses: 1
-# ldapwhoami
-  SASL/GSSAPI authentication started
-  SASL username: admin/admin@DA.ADK
-  SASL SSF: 56
-  SASL data security layer installed.
-  dn:uid=admin/admin,ou=people,dc=da,dc=adk
-# ldapadd -f test.ldif 
-  SASL/GSSAPI authentication started
-  SASL username: admin/admin@DA.ADK
-  SASL SSF: 56
-  SASL data security layer installed.
-  adding new entry "uid=test,ou=people,dc=da,dc=adk"
-  ldap_add: Insufficient access (50)
-          additional info: no write access to parent
-# kinit ldapadmin
-# ldapadd -f test.ldif 
-  SASL/GSSAPI authentication started
-  SASL username: ldapadmin@DA.ADK
-  SASL SSF: 56
-  SASL data security layer installed.
-  adding new entry "uid=test,ou=people,dc=da,dc=adk"
-# ldapsearch -b 'dc=da,dc=adk'
-  SASL/GSSAPI authentication started
-  SASL username: ldapadmin@DA.ADK
-  SASL SSF: 56
-  SASL data security layer installed.
-  # extended LDIF
-  #
-  # LDAPv3
-  # base <dc=da,dc=adk> with scope subtree
-  # filter: (objectclass=*)
-  # requesting: ALL
-  #
-  
-  # da.adk
-  dn: dc=da,dc=adk
-  objectClass: organization
-  objectClass: dcObject
-  objectClass: top
-  o: myCompany
-  dc: da
-  description: root entry
-  
-  # people, da.adk
-  dn: ou=people,dc=da,dc=adk
-  objectClass: organizationalUnit
-  ou: people
-  description: Users
+``` sh
+$ kdestroy 
+$ ldapsearch
+SASL/GSSAPI authentication started
+ldap_sasl_interactive_bind_s: Local error (-2)
+        additional info: SASL(-1): generic failure: GSSAPI Error: Unspecified GSS failure.  Minor code may provide more information (Credentials cache file '/tmp/krb5cc_0' not found)
+$ kinit admin/admin
+$ ldapsearch
+SASL/GSSAPI authentication started
+SASL username: admin/admin@DA.ADK
+SASL SSF: 56
+SASL data security layer installed.
+# extended LDIF
+#
+# LDAPv3
+# base <> (default) with scope subtree
+# filter: (objectclass=*)
+# requesting: ALL
+#
 
-  # ldapadmin, people, da.adk
-  dn: uid=ldapadmin,ou=people,dc=da,dc=adk
-  objectClass: inetOrgPerson
-  objectClass: posixAccount
-  objectClass: shadowAccount
-  cn: LDAP admin account
-  sn: ldapadmin
-  uid: ldapadmin
-  uidNumber: 1001
-  gidNumber: 100
-  homeDirectory: /home/ldap
-  loginShell: /sbin/nologin
-  
-  # test, people, da.adk
-  dn: uid=test,ou=people,dc=da,dc=adk
-  objectClass: inetOrgPerson
-  objectClass: posixAccount
-  objectClass: shadowAccount
-  cn: test account
-  sn: test
-  uid: test
-  uidNumber: 1002
-  gidNumber: 1002
-  homeDirectory: /home/test
-  loginShell: /bin/bash
-  
-  # search result
-  search: 5
-  result: 0 Success
-  
-  # numResponses: 5
-  # numEntries: 4
+# search result
+search: 5
+result: 32 No such object
+
+# numResponses: 1
+$ ldapwhoami
+SASL/GSSAPI authentication started
+SASL username: admin/admin@DA.ADK
+SASL SSF: 56
+SASL data security layer installed.
+dn:uid=admin/admin,ou=people,dc=da,dc=adk
+$ ldapadd -f test.ldif 
+SASL/GSSAPI authentication started
+SASL username: admin/admin@DA.ADK
+SASL SSF: 56
+SASL data security layer installed.
+adding new entry "uid=test,ou=people,dc=da,dc=adk"
+ldap_add: Insufficient access (50)
+        additional info: no write access to parent
+$ kinit ldapadmin
+$ ldapadd -f test.ldif 
+SASL/GSSAPI authentication started
+SASL username: ldapadmin@DA.ADK
+SASL SSF: 56
+SASL data security layer installed.
+adding new entry "uid=test,ou=people,dc=da,dc=adk"
+$ ldapsearch -b 'dc=da,dc=adk'
+SASL/GSSAPI authentication started
+SASL username: ldapadmin@DA.ADK
+SASL SSF: 56
+SASL data security layer installed.
+# extended LDIF
+#
+# LDAPv3
+# base <dc=da,dc=adk> with scope subtree
+# filter: (objectclass=*)
+# requesting: ALL
+#
+
+# da.adk
+dn: dc=da,dc=adk
+objectClass: organization
+objectClass: dcObject
+objectClass: top
+o: myCompany
+dc: da
+description: root entry
+
+# people, da.adk
+dn: ou=people,dc=da,dc=adk
+objectClass: organizationalUnit
+ou: people
+description: Users
+
+# ldapadmin, people, da.adk
+dn: uid=ldapadmin,ou=people,dc=da,dc=adk
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: LDAP admin account
+sn: ldapadmin
+uid: ldapadmin
+uidNumber: 1001
+gidNumber: 100
+homeDirectory: /home/ldap
+loginShell: /sbin/nologin
+
+# test, people, da.adk
+dn: uid=test,ou=people,dc=da,dc=adk
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+cn: test account
+sn: test
+uid: test
+uidNumber: 1002
+gidNumber: 1002
+homeDirectory: /home/test
+loginShell: /bin/bash
+
+# search result
+search: 5
+result: 0 Success
+
+# numResponses: 5
+# numEntries: 4
 ```
 同时可以查看日志文件`tao01:/var/log/krb5kdc.log`及`tao02:/var/log/slapd.log`进行观察。
 
-
+#### 备注
+可以使用`yum install openldap openldap-servers openldap-clients openldap-devel compat-openldap`安装openldap，据说将`/etc/openldap/slap.d`目录移除后可以建立自己的`slapd.conf`配置文件。通过这种方法可以不用修改`/etc/init.d/slpad`脚本，减少对服务的变动。
 
 ### *参考文档*
 *[Integrating LDAP and Kerberos](http://www.linux-mag.com/id/4738/,"Part Two不再标注")*
