@@ -25,7 +25,7 @@ $ git remote add origin /path/to/remote/repo.git
 $ git push origin master
 ```
 
-这样我们就建立了远程库并完成本地库对其第一次推送。上述操作有两处较为特别，远程库目录名以`.git`结尾并且执行`git init`的时候使用了`--bare`选项，从输出中可以看出，这个远程库是不具有工作目录的。虽然本质上来说，Git库都具有同等地位，但是逻辑上来说被大家用以交流分享的库依然具有 *中央库* 的含义，Git版本库主要分为两种，分别被称为`bare repository`及`development repository`，对应着 *中央库* 和本地库，前者不应该作为日常开发使用，使用`--bare`选项创建的正是这一种。之所以存在`bare repostitory`，是因为如果 *中央库* 具有工作目录的话，在其中进行修改时候如果有其他开发者推送更新则产生冲突。今天需要建立的远程库不需要直接对其修改，使用`bare repository`类型。通常使用`.git`结尾的目录来表示该库是一个`bare repository`。
+这样我们就建立了远程库并完成本地库对其第一次推送。上述操作有两处较为特别，远程库目录名以`.git`结尾并且执行`git init`的时候使用了`--bare`选项，从输出中可以看出，这个远程库是不具有工作目录的。虽然本质上来说，Git库都具有同等地位，但是逻辑上来说被大家用以交流分享的库依然具有 *中央库* 的含义，Git版本库主要分为两种，分别被称为`bare repository`及`development repository`，对应着 *中央库* 和本地库，前者不应该作为日常开发使用，使用`--bare`选项创建的正是这一种。之所以存在`bare repostitory`，是因为`push`操作会更新 *中央库* 的状态，包括`HEAD commit`，但并没有`checkout`操作，如果 *中央库* 具有工作目录的话，其与目录内容及索引就不同步了，这时候在 *中央库* 工作目录中工作的人员意识不到这次`push comit`，再次提交时产生异常，如果强制提交则引起别人`push`内容丢失。今天需要建立的远程库不需要直接对其修改，使用`bare repository`类型。通常使用`.git`结尾的目录来表示该库是一个`bare repository`。
 
 #### 其他
 后续如果从位于本地文件系统的远程库克隆，可以使用`git clone --no-hardlinks /path/to/remote/repo.git /path/to/local/repot`命令。如果不使用`--no-hardlinks`选项，那么本地库不会复制`.git/objects`目录，而是默认对 **已有内容** 进行硬链以节省空间，为了彻底分离建议使用该选项。
