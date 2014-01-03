@@ -12,10 +12,10 @@ tags: ["Hadoop","Namenode"]
 这个记录也可以作为Namenode故障时SecondaryNamenode切换的参考。
 
 ### 1. 准备
-新机器上架，主机名与namenode相同并进行环境同步。注意以下两条
+新机器上架，主机名与namenode相同并进行环境同步。注意以下
 
 ```sh
-scp /etc/ssh/ssh_host_rsa_key{,.pub} newNamenode:/etc/ssh #同步主机公密钥，默认rsa认证。
+scp /etc/ssh/ssh_host_rsa_key{,.pub} newNamenode:/etc/ssh #同步主机公密钥，默认rsa认证
 vim ~/.ssh/known_hosts #删除刚刚增加的newNamenode的记录
 scp -r ~/.ssh newNamenode:~/
 ```
