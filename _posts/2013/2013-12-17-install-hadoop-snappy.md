@@ -41,7 +41,7 @@ $ ln -s /work/java/jre/lib/amd64/server/libjvm.so /usr/local/lib
 $ mvn package
 ```
 
-## 4. 安装到Hadoop集群
+### 4. 安装到Hadoop集群
 `hadoop-snappy`编译生成的`target/hadoop-snappy-0.0.1-SNAPSHOT.tar.gz`包已经含有`libsnappy`本地库文件，所以各个节点不需要安装`snappy`，分发即可。
 
 ``` sh
@@ -50,7 +50,19 @@ $ tar -zxf hadoop-snappy-0.0.1-SNAPSHOT.tar.gz
 $ for x in $(cat $HADOOP_HOME/conf/slaves);do scp -r hadoop-snappy-0.0.1-SNAPSHOT/lib/* $x:$HADOOP_HOME/lib/;done
 ```
 
-此时已经可以通过使用类似`SET hive.exec.compress.output=true; SET mapred.output.compression.codec=org.apache.hadoop.io.compress.SnappyCodec; SET mapred.output.compression.type=BLOCK;`这样的命令来调用`hadoop-snappy`进行压缩了。如果需要让Hadoop或Hive默认使用这些配置，则修改对应的配置文件，涉及Hadoop配置需要重启集群。
+修改`core-site.xml`加入以下配置并重启Hadoop。
+
+```xml
+  <property>
+    <name>io.compression.codecs</name>
+    <value>
+      org.apache.hadoop.io.compress.SnappyCodec
+    </value>
+  </property>
+```
+
+### 5. 其他
+Hadoop从1.0.2及0.23.0版本开始，已经[默认包含了hadoop-snappy的支持](https://issues.apache.org/jira/browse/HADOOP-7206)，这些版本如果需要使用snappy，只需要将第1步生成的libsnappy库文件(`/usr/local/lib/libsnappy*`)放置到所有节点的Hadoop本地库目录(`$HADOOP_HOME/lib/native/Linux-amd64-64/`)中即可。Hadoop默认配置文件中已经包含第4步中的配置，不需要进行重启即可直接使用。
 
 ### 参考文档
 *[Hadoop HBase 配置 安装 Snappy 终极教程](http://shitouer.cn/2013/01/hadoop-hbase-snappy-setup-final-tutorial/)*
