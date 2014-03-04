@@ -1,7 +1,7 @@
 ---
 layout: post
 title: 升级hadoop版本
-category: 数据平台
+category: 服务
 tagline: hadoop 0.20.2升级至hadoop 1.0.4
 description: 升级Hadoop版本过程记录，hadoop升级主要在于HDFS数据布局升级
 tags: ["Hadoop","HDFS"]

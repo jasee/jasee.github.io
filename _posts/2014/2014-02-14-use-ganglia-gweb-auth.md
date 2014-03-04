@@ -1,7 +1,7 @@
 ---
 layout: post
 title: 使用Ganglia-Gweb权限
-category: 监控及报表
+category: 运维
 tagline: Gweb简单认证和授权
 description: Gweb使用简单的认证和授权进行访问和编辑控制。
 tags: ["Ganglia","Monitor","Gweb"]
