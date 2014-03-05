@@ -1,6 +1,6 @@
 ---
 layout: post
-title: 使用Ganglia-安装
+title: Ganglia--安装
 category: 运维
 tagline: Ganglia基本安装过程
 description: Ganglia是一个方便易用的监控系统，本文记录了基本安装过程。
