@@ -138,6 +138,7 @@ $ for x in  tao0{2,3,4}; do scp /etc/krb5.conf $x:/etc/; done
 ### 1. 安装OpenLDAP
 
 ```sh
+$ yum install db4 db4-utils db4-devel cyrus-sasl*
 $ yum install openldap openldap-servers openldap-clients openldap-devel compat-openldap
 ```
 
