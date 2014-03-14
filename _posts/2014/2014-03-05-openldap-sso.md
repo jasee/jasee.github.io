@@ -1,7 +1,7 @@
 ---
 layout: post
 title: OpenLDAP--单点登录SSO
-category: 服务
+category: 运维
 tagline: 允许OpenLDAP用户登录服务器并使用位于NFS上的家目录
 description: 记录允许使用Kerberos及OpenLDAP进行认证及登录的配置过程，包括建立NFS存放用户家目录，并配置SSH进行单点登录。
 tags: ["Kerberos","OpenLDAP","SSH","NFS","单点登录","SSO"]
