@@ -2,11 +2,9 @@
 layout: post
 title: 安装kerberos化的openldap
 category: 运维
-tagline: kerberized openldap的无主备安装
 description: 本文记录了kerberos及openldap的安装过程，openldap使用kerberos及TLS。
 tags: ["Kerberos","OpenLDAP","TLS"]
 ---
-{% include JB/setup %}
 
 ### 说明
 [统一认证平台(一):安装kerberos化的openldap](/2013/12/10/install-kerberized-ldap/)

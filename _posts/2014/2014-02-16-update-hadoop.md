@@ -2,11 +2,9 @@
 layout: post
 title: 升级hadoop版本
 category: 服务
-tagline: hadoop 0.20.2升级至hadoop 1.0.4
 description: 升级Hadoop版本过程记录，hadoop升级主要在于HDFS数据布局升级
 tags: ["Hadoop","HDFS"]
 ---
-{% include JB/setup %}
 
 2013年初将一个Hadoop集群从版本0.20.2升级至1.0.4，记录整理如下，耗时供参考。
 集群规模：25个节点，100T数据(34T * 3)，文件及块共1150万。

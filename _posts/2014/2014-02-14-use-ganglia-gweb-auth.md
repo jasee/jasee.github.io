@@ -2,11 +2,9 @@
 layout: post
 title: Ganglia--Gweb权限
 category: 运维
-tagline: Gweb简单认证和授权
 description: Gweb使用简单的认证和授权进行访问和编辑控制。
 tags: ["Ganglia","Monitor","Gweb"]
 ---
-{% include JB/setup %}
 
 基本环境的安装见[上文][1]，将ghost02单独建立群组`Cluster02`。
 一般来说，Ganglia都搭建在内网环境中，Gweb的访问也在公司范围内，但是还是会有一些权限需求，比如部分或全部数据需要限定访问范围,保存的视图不想被改动，监控墙上的项目不被破坏等。Gweb权限管理做得一般，不过这些基本要求也能达到啦。计划实现以下需求：

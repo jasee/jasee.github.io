@@ -2,11 +2,9 @@
 layout: post
 category: 随笔
 title: 中秋出游三首
-tagline: 记几天精神不正常的日子
 description: 华山-西安-重庆游玩随笔
 tags: ["断章","出游"]
 ---
-{% include JB/setup %}
 
 ### 登华山
 路贴人面起，风从脚下生，太华古道愁攀登。

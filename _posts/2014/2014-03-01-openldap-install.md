@@ -2,11 +2,9 @@
 layout: post
 title: OpenLDAP--安装
 category: 运维
-tagline: Kerberized OpenLDAP的无主备安装
 description: 本文记录了Kerberos及OpenLDAP的安装过程，OpenLDAP使用Kerberos及TLS。
 tags: ["Kerberos","LDAP","OpenLDAP","TLS"]
 ---
-{% include JB/setup %}
 
 ### 说明
 

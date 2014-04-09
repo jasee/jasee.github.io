@@ -2,11 +2,9 @@
 layout: post
 title: 使用LDAP及Kerberos进行单点登录
 category: 运维
-tagline: 允许LDAP用户登录服务器并使用位于NFS上的家目录
 description: 记录允许使用Kerberos及LDAP进行认证及登录的配置过程，包括建立NFS存放用户家目录，并配置SSH进行单点登录。
 tags: ["Kerberos","LDAP","SSH","NFS","单点登录","SSO"]
 ---
-{% include JB/setup %}
 
 ### 说明
 [统一认证平台(一):安装kerberos化的openldap](/2013/12/10/install-kerberized-ldap/)

@@ -2,11 +2,9 @@
 layout: post
 title: Cmd--推荐一款在线Markdown编辑器
 category: 工具
-tagline: 推荐一款在线Markdown阅读编辑器，漂亮易用。
 description: 希望通过这个赏心悦目的编辑器，能有更多的人学习和习惯使用Markdown。
 tags: ["Markdown","Cmd","推荐"]
 ---
-{% include JB/setup %}
 
 接触Markdown已经近半年，在这半年里我基本抛弃了Word等软件，这个博客所有博文也均以Markdown格式写成。
 对Markdown的喜爱来源于对透明文本的信赖。Markdown简单易用，语法清晰直白，对代码支持非常好，特别适合只需要简单排版关注内容的书写。Markdown与Git以及Gitlab/Github等工具相结合，可以很方便的进行同步、管理与阅读、分享。

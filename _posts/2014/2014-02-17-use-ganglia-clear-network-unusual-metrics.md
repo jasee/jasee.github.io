@@ -2,11 +2,9 @@
 layout: post
 title: Ganglia--清理网络流量异常数据
 category: 运维
-tagline: 使用rrdtool清理网络流量异常数据
 description: 因为一些网卡驱动异常，ganglia采集的网卡数据中可能出现异常大的数值，可以使用rrdtool修改数据进行清理。
 tags: ["Ganglia","Monitor","RRD"]
 ---
-{% include JB/setup %}
 
 使用Ganglia时，可能碰到[网络流量值异常的情况][1]，如果不具备升级网卡的条件，或者不想因为引入Ganglia进行过多的变更，可以考虑修改rrd数据文件来定期清理异常数据。
 根据实际观察，异常流量都是PB级的，与正常流量差别数个数量级，可以很容易进行区分。主要思路如下

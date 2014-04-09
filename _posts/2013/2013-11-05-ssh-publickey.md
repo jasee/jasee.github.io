@@ -2,11 +2,9 @@
 layout: post
 title: 浅谈SSH信任关系
 category: 系统 
-tagline: 基于公钥认证的SSH信任关系建立及维护
 description: 同一集群使用一套公密钥，认证过程、known_hosts维护。 
 tags: ["SSH","Linux","信任关系","公密钥"]
 ---
-{% include JB/setup %}
 
 ### 简介
 使用SSH进行登录认证通常有两种方式：

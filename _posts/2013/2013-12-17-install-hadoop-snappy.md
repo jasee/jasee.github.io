@@ -2,11 +2,9 @@
 layout: post
 title: 安装Hadoop Snappy
 category: 服务
-tagline: 为每个datanode安装hadoop Snappy。
 description: 记录安装hadoop snappy的过程，可供主动设定参数调用，暂未更新配置及重启hadoop。
 tags: ["Hadoop","Snappy"]
 ---
-{% include JB/setup %}
 
 在某台datanode上完成编译后分发到所有节点。
 ### 1. 安装snappy

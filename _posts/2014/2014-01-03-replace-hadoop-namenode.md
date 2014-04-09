@@ -2,11 +2,9 @@
 layout: post
 title: 替换Hadoop Namenode
 category: 服务
-tagline: 使用新服务器替换Hadoop Namenode
 description: 对于没有进行Namenode HA的Hadoop集群来说，可能会有替换Namenode的需求，本文记录了进行机器替换的步骤。
 tags: ["Hadoop","Namenode"]
 ---
-{% include JB/setup %}
 
 对于没有进行Namenode HA的Hadoop集群来说，可能会有替换Namenode的需求，如硬件老化故障、性能问题等。[通过使用同一套主机公密钥](/2013/11/05/ssh-publickey/)可以避免Namenode对其他节点的密钥认证失效问题，尽量透明的进行机器替换。
 这个记录也可以作为Namenode故障时SecondaryNamenode切换的参考。

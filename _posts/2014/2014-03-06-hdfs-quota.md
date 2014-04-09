@@ -2,11 +2,9 @@
 layout: post
 title: HDFS配额
 category: 服务
-tagline: HDFS配额基本知识及管理命令
 description: 本文介绍了HDFS配额的基本知识和设置、查看及取消方法。HDFS配额较为原始简单，不过能够满足一般需求，可根据情况使用。
 tags: ["Hadoop","HDFS","配额"]
 ---
-{% include JB/setup %}
 
 HDFS允许管理员对目录进行配额限制，限制类型分为两种:
 

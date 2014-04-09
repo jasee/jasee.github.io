@@ -2,11 +2,9 @@
 layout: post
 title: OpenLDAP--安装phpLDAPadmin
 category: 运维
-tagline: Apache支持Kerberos认证及phpLDAPadmin使用sasl登陆
 description: 由于需要对Kerberized OpenLDAP进行管理，安装支持sasl认证的phpLDAPadmin就顺利成章，本文记录Apache支持Kerberos认证及phpLDAPadmin使用sasl方式登陆的过程。
 tags: ["Apache","OpenLDAP","Kerberos","Mod_auth_kerb","phpLDAPadmin"]
 ---
-{% include JB/setup %}
 
 [phpLDAPadmin][1]是一个LDAP web客户端，它提供一个简单的、支持多语言多环境的LDAP管理功能。
 

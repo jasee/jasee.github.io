@@ -1,5 +1,16 @@
-## 欢迎
-这是[opjasee.com](http://opjasee.com)的源码，这个模板基于[Jekyll Bootstrap](http://jekyllbootstrap.com/)，使用[hooligan](http://themes.jekyllbootstrap.com/preview/hooligan/)主题，并在此基础上进行了一定的修改，最终效果请参见[我的博客](http://jasee.github.io)。
-欢迎使用我的模板，如果有问题也欢迎与我一起讨论。
+### 我的博客
 
-更新：使用[Zhenyu's Blog](http://zyzhang.github.io/)的模板。
+地址：[http://opjasee.com](http://opjasee.com)
+
+### 安装说明
+
+1. fork库到自己的github
+2. 修改名字为：`username.github.io`
+3. clone库到本地，参考`_posts`中的目录结构自己创建适合自己的文章目录结构
+4. 修改CNAME，或者删掉这个文件，使用默认域名
+5. 修改`_config.yml`配置项
+6. It's done!
+
+### 说明
+
+模板来源于[yansu.org](http://yansu.org/)。

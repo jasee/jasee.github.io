@@ -2,11 +2,9 @@
 layout: post
 title: Ganglia--安装
 category: 运维
-tagline: Ganglia基本安装过程
 description: Ganglia是一个方便易用的监控系统，本文记录了基本安装过程。
 tags: ["Ganglia","Monitor"]
 ---
-{% include JB/setup %}
 
 Ganglia是一个挺好的监控系统，便于编写的插件脚本、灵活的拓扑机制以及web界面上销魂的正则匹配和图形聚合，谁用谁知道呀。本文记录的Ganglia的基本安装过程。
 测试机环境:

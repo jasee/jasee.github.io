@@ -2,11 +2,9 @@
 layout: post
 title: OpenLDAP--使用sudo进行权限分配
 category: 运维
-tagline: 通过在OpenLDAP中增加sudoers配置，让不同用户在不同服务器上具有不同的权限。
 description: 目前，已经可以使用Kerberos进行认证，使用OpenLDAP存储用户属性，使得服务以此允许用户登陆并设定基本属性，但是所有用户在所有机器都是同一个普通用户权限，为了实际使用，还需要引入权限差异功能。sudo可以满足该需求，通过读取存储在OpenLDAP中的配置，允许不同的用户在不同的机器使用不同的(特权)命令。以
 tags: ["Sudo","OpenLDAP","Kerberos"]
 ---
-{% include JB/setup %}
 
 目前，已经可以使用Kerberos进行认证，使用OpenLDAP存储用户属性，使得服务以此允许用户登陆并设定基本属性，但是所有用户在所有机器都是同一个普通用户权限，为了实际使用，还需要引入权限差异功能。sudo可以满足该需求，通过读取存储在OpenLDAP中的配置，允许不同的用户在不同的机器使用不同的(特权)命令。以下是具体的配置过程。
 

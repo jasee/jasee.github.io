@@ -2,11 +2,9 @@
 layout: post
 title: Azkaban使用说明
 category: 服务
-tagline: 使用Azkaban调度Hadoop任务的简单说明
 description: Azkaban相比于crontab调度具有很多优势，也有很多不同。本文主要对原有任务迁移到Azkaban上需要关注的内容做一些说明。
 tags: ["Azkaban","Hadoop"]
 ---
-{% include JB/setup %}
 
 Azkaban相比于crontab调度具有很多优势，也有很多不同。本文主要对原有任务迁移到Azkaban上需要关注的内容做一些说明。错误及遗漏部分逐步更正更新。
 
