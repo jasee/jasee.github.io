@@ -17,4 +17,4 @@ Markdown][1]，那时候这个编辑工具还挂在[@ghosert][2]的博客下，�
 [1]: https://zybuluo.com/mdeditor
 [2]: http://weibo.com/ghosert
 [3]: https://help.github.com/articles/github-flavored-Markdown
-[4]: /assets/image/post/2014-03-05-cmd-markdown-0.png
+[4]: /public/upload/2014-03-05-cmd-markdown-0.png
