@@ -230,7 +230,7 @@ olcAccess: {1}to * by dn="uid=ldapadmin,ou=people,dc=opjasee,dc=com" write by * 
 使用`ldapmodify -Y EXTERNAL -H ldapi:/// -f setup.ldif`命令导入更新配置。此后只有`ldapadmin@OPJASEE.COM`具有管理员权限。
 此时在`tao02.opjasee.com`上执行`ldapsearch -H ldaps://tao02.opjasee.com`应该能正常返回结果。
 ### 5. 客户端安装及测试
-可以使用`yum install openldap-clients`安装openldap客户端，修改`/etc/openldap/lapd.conf'
+可以使用`yum install openldap-clients`安装openldap客户端，修改`/etc/openldap/lapd.conf`
 
 ```
 BASE    dc=opjasee,dc=com

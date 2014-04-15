@@ -40,21 +40,15 @@ $ authconfig --enableldap --enableldapauth --enablekrb5 --enableldaptls --ldapse
 Starting nslcd:                                            [  OK  ]
 ```
 
-修正配置文件中`tls_cacertdir`的定义并重启`nslcd`服务
+这个命令会重写`/etc/openldap/ldap.conf`这个配置文件，经过查看该配置以及`/etc/nslcd.conf`和`/etc/pam_ldap.conf`，可以发现，虽然在Centos6上安装OpenLDAP客户端时生成的证书目录是`/etc/openldap/certs`，但是周边程序都使用`/etc/openldap/cacerts`，并且刚刚这些命令还生成了这个空目录。为了减少其他程序的配置变更，使用`certs`目录替换`cacerts`。注意，目前的`certs`目录已经导入了CA证书。
 
 ```sh
-$ tail -1 /etc/nslcd.conf
-tls_cacertdir /etc/openldap/certs
-$ service nslcd restart 
+$ rmdir /etc/openldap/cacerts
+$ mv /etc/openldap/certs /etc/openldap/cacerts
+$ service nslcd restart # 重启nslcd读取证书 
 ```
 
 此时执行`id test`应该能够看到输出为`uid=1002(test) gid=1002 groups=1002`。
-修改配置文件`/etc/pam_ldap.conf`：
-
-```
-tls_cacertdir /etc/openldap/certs
-```
-
 切换到`tao04`上测试登陆，应该可以登陆了。可以看出还有一些问题，我们接下来进行解决。
 
 ```sh
