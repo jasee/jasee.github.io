@@ -81,3 +81,48 @@ export PROMPT_COMMAND='{ msg=$(history 1 | { read x y; echo $y; });logger -p loc
 ```
 
 因为一些原因，没有使用NFS做用户家目录，也没有进行SSH票据转发，以上步骤不包含这两部分，其他部分参考之前的文档说明。因为时间问题，暂未将以上步骤整合成具有较高容错性的脚本。
+
+### Centos5客户端配置
+在Centos5上，上述步骤有部分需要改动，改动部分如下：
+
+```sh
+# 客户端安装及开启ldap认证需要变更
+$ yum install openldap-clients krb5-workstation -y
+$ yum install nss_ldap -y
+$ authconfig --enableldap --enableldapauth --enablekrb5 --enableldaptls --ldapserver="tao02.opjasee.com" --ldapbasedn="dc=opjasee,dc=com" --update
+$ cp /tmp/ldapCA.rfc /etc/openldap/cacerts/
+$ cacertdir_rehash /etc/openldap/cacerts
+$ authconfig --enablemkhomedir --update
+
+# sudo配置需要变更
+$ yum install sudo # 更新sudo版本
+# 在/etc/ldap.conf中保存如下内容
+uri ldap://tao02.opjasee.com/
+sudoers_base ou=SUDOers,dc=opjasee,dc=com
+base dc=opjasee,dc=com
+ssl start_tls
+tls_cacertdir /etc/openldap/cacerts
+# nsswitch.conf增加以下内容
+sudoers:    files ldap
+```
+
+### sudo配置风险
+如果服务器本地存在和ldap上同名的用户或用户组，那么本地用户就具有对应ldap用户同样的sudo权限。并且无需经过Kerberos认证即可使用sudo，比较危险，需要注意。
+
+### sudo多命令或多机器配置
+如果一个用户或用户组需要在不止一台服务器上拥有不止一条的sudo命令，可以使用类似下面的设置
+
+```
+# %op, SUDOers, opjasee.com
+dn: cn=%op,ou=SUDOers,dc=opjasee,dc=com
+objectClass: top
+objectClass: sudoRole
+cn: %op
+sudoCommand: /bin/su test -l
+sudoCommand: /bin/su work -l
+sudoHost: tao03.opjasee.com
+sudoHost: tao04.opjasee.com
+sudoOption: !authenticate
+sudoRunAsUser: ALL
+sudoUser: %op
+```
