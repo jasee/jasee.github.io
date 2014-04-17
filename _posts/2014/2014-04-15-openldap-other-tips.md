@@ -66,7 +66,7 @@ tls_cacertdir /etc/openldap/cacerts
 sudoers:    files ldap
 
 # 操作审计，新增两个文件：
-$ cat /etc/rsyslog.d/client.conf
+# 新增/etc/rsyslog.d/client.conf，写入
 ### begin forwarding rule ###
 $WorkDirectory /var/lib/rsyslog # where to place spool files
 $ActionQueueFileName fwdRule1   # unique name prefix for spool files
@@ -76,7 +76,7 @@ $ActionQueueType LinkedList     # run asynchronously
 $ActionResumeRetryCount 3       # infinite retries if host is down
 local1.info @@tao02.opjasee.com:514
 ### end of the forwarding rule ###
-$ cat /etc/profile.d/client.sh
+# 新增/etc/profile.d/client.sh，写入
 export PROMPT_COMMAND='{ msg=$(history 1 | { read x y; echo $y; });logger -p local1.info "[euid=$(whoami)][$(who am i)][$(pwd)]:$msg"; }'
 ```
 
@@ -104,7 +104,23 @@ ssl start_tls
 tls_cacertdir /etc/openldap/cacerts
 # nsswitch.conf增加以下内容
 sudoers:    files ldap
+
+# 操作审计变更
+# Centos5.4上还是用syslog进行日志记录。修改/etc/sysconfig/syslog的一个参数为
+SYSLOGD_OPTIONS=" -r -x -m 0"
+# 在/etc/syslog.conf中追加一行
+local1.info @tao02.opjasee.com
+# 新增/etc/profile.d/client.sh，写入
+export PROMPT_COMMAND='{ msg=$(history 1 | { read x y; echo $y; });logger -p local1.info "[euid=$(whoami)][$(who am i)][$(pwd)]:$msg"; }'
+# 另外还需要修改/etc/bashrc，防止其覆盖PROMPT_COMMAND变量，找到case $TERM in语句，在case外面加一个if，如下
+if [ -z "$PROMPT_COMMAND" ]; then
+    case $TERM in
+        ...
+    esac
+fi
 ```
+
+`syslog`使用UDP协议发送远程日志，所以别忘了在日志服务器端打开UDP 514端口进行监听。Centos5在这方面的易用性比Centos6差好多，而且开启日志记录后偶尔有命令卡顿现象。
 
 ### sudo配置风险
 如果服务器本地存在和ldap上同名的用户或用户组，那么本地用户就具有对应ldap用户同样的sudo权限。并且无需经过Kerberos认证即可使用sudo，比较危险，需要注意。
