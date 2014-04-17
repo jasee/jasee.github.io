@@ -50,9 +50,21 @@ $ mv /etc/openldap/certs /etc/openldap/cacerts
 $ certutil -d /etc/openldap/cacerts/ -A -a -n 'OpenLDAP Server' -t 'CT' -f /etc/openldap/cacerts/password -i /tmp/ldapCA.rfc
 $ service nslcd restart
 $ authconfig --enablemkhomedir --update
+
 # SSH聚合，参考kadmin语句如下：
 addprinc -randkey host/tao03.opjasee.com@OPJASEE.COM
 ktadd host/tao03.opjasee.com@OPJASEE.COM
+
+# sudo配置
+# /etc/sudo-ldap.conf中追加以下内容
+uri ldap://tao02.opjasee.com/
+sudoers_base ou=SUDOers,dc=opjasee,dc=com
+base dc=opjasee,dc=com
+ssl start_tls
+tls_cacertdir /etc/openldap/cacerts
+# nsswitch.conf增加以下内容
+sudoers:    files ldap
+
 # 操作审计，新增两个文件：
 $ cat /etc/rsyslog.d/client.conf
 ### begin forwarding rule ###

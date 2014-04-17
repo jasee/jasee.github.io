@@ -178,7 +178,7 @@ uri ldap://tao02.opjasee.com/
 sudoers_base ou=SUDOers,dc=opjasee,dc=com
 base dc=opjasee,dc=com
 ssl start_tls
-tls_cacertdir /etc/openldap/certs
+tls_cacertdir /etc/openldap/cacerts
 ```
 
 sudo按照`/etc/nsswitch.conf`中的配置内容顺序读取sudoer配置，后匹配到的信息会覆盖之前匹配的，以ldap信息为准的话在`nsswitch.conf`中加入如下内容，如果需要本地配置优先的话顺序反过来就行了。
