@@ -142,3 +142,16 @@ sudoOption: !authenticate
 sudoRunAsUser: ALL
 sudoUser: %op
 ```
+
+### 域名变更
+如果所使用的域名发生变更，需要重新生成相关数据。部分说明如下：
+
+1. `/usr/local/kerberos/var/krb5kdc/`目录下存放Kerberos数据，注意还有个点文件。
+2. `/var/lib/ldap`下存放slapd的数据。
+3. 可以通过删除`/etc/openldap`目录，使用`yum reinstall openldap openldap-server`可重新来获取新的证书及原始配置。
+4. 客户端也可以删除`/etc/openldap`目录，使用`yum reinstall openldap`重新生成。
+5. 所有principal和keytab都需要重新生成，证书需要重新导入，配置需要重做。
+6. 客户端重新执行一遍更新后的`authconfig`命令即可更新ldap、nslcd等服务的相关配置。
+
+### 对现有系统的影响。
+当ldap服务无法使用时，客户端本地用户登陆会出现一定的迟缓，Centos6大概需要10s，而Centos5则需要数分钟。两者重试机制不同，需关注。
