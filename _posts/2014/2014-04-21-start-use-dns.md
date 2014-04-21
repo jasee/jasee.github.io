@@ -1,0 +1,151 @@
+---
+layout: post
+title: 使用Bind搭建内网DNS
+category: 运维
+description: 随着内网服务器数量增大，维护一份hosts配置越来越困难，需要搭建一个纯内网DNS。
+tags: ["Bind","DNS","FQDN"]
+---
+
+随着内网服务器数量增大，维护一份hosts配置越来越困难，需要搭建一个纯内网DNS，具体的需求是：
+
+1. 目前所有服务器使用短名，各个程序配置及记录也是，需要能够继续使用短名。
+2. 除了自行定义的解析以外，其他域名解析仍使用公网DNS，也不需要将一些同域名公网配置手工同步到DNS上。
+
+测试环境及部署目标：
+
+1. tao01，Centos6.3，部署Bind主服务。
+2. tao02，Centos6.3，部署Bind从服务。
+
+### 安装及配置
+使用yum进行安装：`yum install bind`
+#### 1. 主配置
+Bind的主配置文件为`/etc/named.conf`，修改该配置内以下几部分
+
+```
+listen-on port 53 { any; }; // 监听所有地址
+//listen-on-v6 port 53 { ::1; }; //暂不使用ipv6
+allow-query     { any; }; //允许所有来源的查询
+include "/etc/named/opjasee.com.zones"; //自定义区域配置写在另外的文件中
+```
+
+#### 2. 区域配置
+`/etc/named/opjasee.com.zones`配置内容如下：
+
+```
+zone "opjasee.com" IN {
+        type master;
+        file "opjasee.com.zone";
+        notify yes;
+        also-notify {192.168.245.129;};
+};
+
+zone "245.168.192.in-addr.arpa" IN {
+        type master;
+        file "245.168.192.zone";
+        notify yes;
+        also-notify {192.168.245.129;};
+};
+```
+
+`notify`参数允许区域数据 **可能** 发生变更时在15分钟以内(在我的小测试环境下基本是即时)通知其他DNS服务器进行数据更新，与后续提到的主从定期同步配合完成数据刷新，具体见参考资料。
+
+#### 3. 区域数据
+这两个文件中存放的是DNS正反解的具体数据，SOA的参数含义在后面从机配置部分说明。其中`tao01 IN A 192.168.245.131`中的`tao01`是`tao01.opjasee.com.`的别名(简写)。在区域配置中，`zone`语句的第二个字段指定了域名`opjasee.com`，该域名会被附加到区域数据所有不以`.`结尾的名字之后。如果不使用简写则要注意点号，`tao01.opjasee.com IN A 192.168.245.131`这种写法是错误的。反解配置类似。
+`/var/named/opjasee.com.zone`
+
+```
+$TTL 10m
+@ IN SOA tao01.opjasee.com. root (
+    2014042101       ; serial
+    30m      ; refresh
+    10m      ; retry
+    1W      ; expire
+    3H )    ; minimum
+
+@ IN NS tao01.opjasee.com.
+tao01 IN A 192.168.245.131
+tao02 IN A 192.168.245.129
+tao03 IN A 192.168.245.130
+tao04 IN A 192.168.245.132
+```
+
+`/var/named/245.168.192.zone`
+
+```
+$TTL 10m
+@ IN SOA tao01.opjasee.com. root (
+    2014042101       ; serial
+    30m      ; refresh
+    10m      ; retry
+    1W      ; expire
+    3H )    ; minimum
+
+@ IN NS tao01.opjasee.com.
+131 IN PTR tao01.opjasee.com.
+129 IN PTR tao02.opjasee.com.
+130 IN PTR tao03.opjasee.com.
+132 IN PTR tao04.opjasee.com.
+```
+
+#### 4. 启动和校验
+完成上述三部分配置之后就可以使用`service named start`来启动Bind了，观察`/var/log/message`日志查看是否正常。
+可以配置`/etc/resolv.conf`之后使用nslookup进行校验，不过这个配置还有其他作用，放到后面一并说明，先使用dig测试一下，下面这两条命令应该都有正常的返回。
+
+```
+dig tao02.opjasee.com @192.168.245.131
+dig tao02.opjasee.com @tao01.opjasee.com
+```
+
+### 从机DNS配置
+DNS这种关键服务，肯定要有备机的啦。备机的`/etc/named.conf`与主机相同，修改`/etc/named/opjasee.com.zones`即可:
+
+```
+zone "opjasee.com" IN {
+        type slave;
+        file "slaves/opjasee.com.zone";
+        masters {192.168.245.131;};
+        notify yes;
+        allow-notify {192.168.245.131;};
+};
+
+zone "245.168.192.in-addr.arpa" IN {
+        type slave;
+        file "slaves/245.168.192.zone";
+        masters {192.168.245.131;};
+        notify yes;
+        allow-notify {192.168.245.131;};
+};
+```
+
+启动Bind服务即可，此时可以在`/var/named/slaves`目录下看到两个数据文件，内容与主上的类似(注释格式可能不同)，使用上述类似的dig命令应该能够得到类似的结果。至此已经完成了一个简单的主从DNS的搭建。
+如果对主从同步的延迟没有要求，可以不配置`notify`。另外，从机的`file`配置不是必须的，当存在该配置时，从机启动时先从本地数据文件加载数据，然后检查主机是否有更新，当没有该配置时，直接从主机获取，为了提高安全性，配置上比较好。
+下面解释之前SOA部分的配置含义:
+
+```
+2014042101  ; serial 序号，从机每次进行同步时，先检查该区域序号，如果主机序号大于从机，则说明需要同步区域数据。建议使用YYYMMDDNN格式，每次更新数据时更新
+30m         ; refresh 从机每隔多久检查一次主机数据
+10m         ; retry 从机如果无法连接主机，重试的间隔时间
+1W          ; expire 从机持续无法连接主机时，区域数据的有效时间，超过该时间无法连接主机时，从机也不再提供解析服务。
+3H          ; minimum  否定缓存TTL，该区域的否定响应的缓存时间
+```
+
+### FQDN及DNS使用
+服务器名称可以是全名(FQDN)，也可以是短名。在已经使用短名的情况下，如果想要能够得到全名(`hostname -f`能正确返回)，主要有[两种方法][1]，要使用DNS，当然是配置`/etc/resolv.conf`
+
+```sh
+search opjasee.com
+nameserver 192.168.245.131
+nameserver 192.168.245.129
+nameserver 202.106.0.20
+```
+
+除了主从DNS地址以外，另加了一个联通DNS保底。关于[search和domain的说明][2]有不少，大多人云亦云，我是没看出来特别的区别来，就用`search`吧。如果网络使用了DHCP的话，要处理好`/sbin/dhclient-script`脚本会根据网卡和服务器名重新生成`/etc/resolv.conf`的问题。
+部分服务(如`authconfig`的`--ldapserver`参数)因为证书等关系是需要使用全名的，否则无法匹配，如果出现此类问题可以从这方面排查一下。
+另外，刚刚建立的DNS域是`opjasee.com`，不满足第2需求的后半部分，实际使用的时候改成`idc.opjasee.com`之类的吧，否则正常的域名如`www.opjasee.com`就没法解析了。
+
+[1]: http://my.oschina.net/jing31/blog/6613
+[2]: http://blog.csdn.net/demo_deng/article/details/9629177
+
+#### *参考资料*
+*[Setting the hostname: FQDN or short name?](http://serverfault.com/questions/331936/setting-the-hostname-fqdn-or-short-name)*
+*[DNS BIND Zone Transfers and Updates](http://www.zytrax.com/books/dns/ch7/xfer.html)*
