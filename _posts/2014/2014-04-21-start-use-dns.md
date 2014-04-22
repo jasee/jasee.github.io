@@ -142,7 +142,7 @@ nameserver 192.168.245.131
 nameserver 192.168.245.129
 ```
 
-除了主从DNS地址以外，另加了一个联通DNS保底。关于[search和domain的说明][2]有不少，大多人云亦云，我是没看出来特别的区别来，就用`search`吧。如果网络使用了DHCP的话，要处理好`/sbin/dhclient-script`脚本会根据网卡和服务器名重新生成`/etc/resolv.conf`的问题。
+关于[search和domain的说明][2]有不少，大多人云亦云，我是没看出来特别的区别来，就用`search`吧。如果网络使用了DHCP的话，要处理好`/sbin/dhclient-script`脚本会根据网卡和服务器名重新生成`/etc/resolv.conf`的问题。
 部分服务(如`authconfig`的`--ldapserver`参数)因为证书等关系是需要使用全名的，否则无法匹配，如果出现此类问题可以从这方面排查一下。
 
 #### 2. 关于搜索域
