@@ -36,18 +36,17 @@ zone "opjasee.com" IN {
         type master;
         file "opjasee.com.zone";
         notify yes;
-        also-notify {192.168.245.129;};
 };
 
 zone "245.168.192.in-addr.arpa" IN {
         type master;
         file "245.168.192.zone";
         notify yes;
-        also-notify {192.168.245.129;};
 };
 ```
 
-`notify`参数允许区域数据 **可能** 发生变更时在15分钟以内(在我的小测试环境下基本是即时)通知其他DNS服务器进行数据更新，与后续提到的主从定期同步配合完成数据刷新，具体见参考资料。
+除了后续提到的定期查询更新以外，`notify`参数允许主节点在区域数据 **可能**
+发生变更时在15分钟以内(Bind会错开每个区域的更新间隔时间进行通知，在我的小测试环境下基本是即时)通知从节点检查更新，其中从节点的列表是主节点通过查询区域NS记录并排除SOA记录的MNAME字段和自身主机域名之后获得的。另外也可以通过`also-notify`参数通知其他节点，接收节点除了接收主节点的通知以外还可以通过`allow-notify`参数允许接收来自其他节点的通知，多级拓扑适当配置允许通知不断传递，具体见参考资料2。
 
 #### 3. 区域数据
 这两个文件中存放的是DNS正反解的具体数据，SOA的参数含义在后面从机配置部分说明。其中`tao01 IN A 192.168.245.131`中的`tao01`是`tao01.opjasee.com.`的别名(简写)。在区域配置中，`zone`语句的第二个字段指定了域名`opjasee.com`，该域名会被附加到区域数据所有不以`.`结尾的名字之后。如果不使用简写则要注意点号，`tao01.opjasee.com IN A 192.168.245.131`这种写法是错误的。反解配置类似。
@@ -63,6 +62,7 @@ $TTL 10m
     3H )    ; minimum
 
 @ IN NS tao01.opjasee.com.
+@ IN NS tao02.opjasee.com.
 tao01 IN A 192.168.245.131
 tao02 IN A 192.168.245.129
 tao03 IN A 192.168.245.130
@@ -81,6 +81,7 @@ $TTL 10m
     3H )    ; minimum
 
 @ IN NS tao01.opjasee.com.
+@ IN NS tao02.opjasee.com.
 131 IN PTR tao01.opjasee.com.
 129 IN PTR tao02.opjasee.com.
 130 IN PTR tao03.opjasee.com.
@@ -104,16 +105,12 @@ zone "opjasee.com" IN {
         type slave;
         file "slaves/opjasee.com.zone";
         masters {192.168.245.131;};
-        notify yes;
-        allow-notify {192.168.245.131;};
 };
 
 zone "245.168.192.in-addr.arpa" IN {
         type slave;
         file "slaves/245.168.192.zone";
         masters {192.168.245.131;};
-        notify yes;
-        allow-notify {192.168.245.131;};
 };
 ```
 
@@ -122,14 +119,15 @@ zone "245.168.192.in-addr.arpa" IN {
 下面解释之前SOA部分的配置含义:
 
 ```
-2014042101  ; serial 序号，从机每次进行同步时，先检查该区域序号，如果主机序号大于从机，则说明需要同步区域数据。建议使用YYYMMDDNN格式，每次更新数据时更新
+2014042101  ; serial 序号，从机每次检查更新时，先检查该区域序号，如果主机序号大于从机，则说明需要同步区域数据。建议使用YYYMMDDNN格式，每次更新数据时更新
 30m         ; refresh 从机每隔多久检查一次主机数据
 10m         ; retry 从机如果无法连接主机，重试的间隔时间
 1W          ; expire 从机持续无法连接主机时，区域数据的有效时间，超过该时间无法连接主机时，从机也不再提供解析服务。
 3H          ; minimum  否定缓存TTL，该区域的否定响应的缓存时间
 ```
 
-### FQDN及DNS使用
+### 使用
+#### 1. FQDN与shortname
 服务器名称可以是全名(FQDN)，也可以是短名。在已经使用短名的情况下，如果想要能够得到全名(`hostname -f`能正确返回)，主要有[两种方法][1]，要使用DNS，当然是配置`/etc/resolv.conf`
 
 ```sh
@@ -141,11 +139,25 @@ nameserver 202.106.0.20
 
 除了主从DNS地址以外，另加了一个联通DNS保底。关于[search和domain的说明][2]有不少，大多人云亦云，我是没看出来特别的区别来，就用`search`吧。如果网络使用了DHCP的话，要处理好`/sbin/dhclient-script`脚本会根据网卡和服务器名重新生成`/etc/resolv.conf`的问题。
 部分服务(如`authconfig`的`--ldapserver`参数)因为证书等关系是需要使用全名的，否则无法匹配，如果出现此类问题可以从这方面排查一下。
-另外，刚刚建立的DNS域是`opjasee.com`，不满足第2需求的后半部分，实际使用的时候改成`idc.opjasee.com`之类的吧，否则正常的域名如`www.opjasee.com`就没法解析了。
 
-[1]: http://my.oschina.net/jing31/blog/6613
-[2]: http://blog.csdn.net/demo_deng/article/details/9629177
+#### 2. 关于搜索域
+配置搜索域以后，当我查找一个带点的名称时，如何判断是在请求一个全名还是搜索域中的短名的呢？使用nslookup的debug模式进行测试，得到以下结论：
+
+1. 如果名称中不包含`.`，那么显然是一个短名，直接在搜索域中进行搜索。
+2. 如果名称中包含`.`，则首先认为这是一个全名，在互联网上进行搜索，如果域名存在，则返回结果，如果不存在，则在搜索域中再次搜索。
+
+按照这个测试结论，在 **只使用短名** 进行DNS请求的情况下，服务器使用短名`google.c`或者`c.google.com`(测试的时候该域名不存在)是可以的，但是使用`google.com`则不行。如果想使用带点短名，建议使用不存在的顶级域名，如`tao01.bj`。也可以看出，当短名中包含`.`时，实际上是有一个试错的过程，如果对性能有要求，最好不使用这样的名称，必须使用的话在访问时使用全名。
+
+------
+
+刚刚建立的DNS域是`opjasee.com`，不满足第2需求的后半部分，实际使用的时候改成`idc.opjasee.com`之类的吧，否则正常的域名如`www.opjasee.com`就没法解析了。
+另外，如果不考虑后期维护风险的话，可以尝试使用[dnspod-sr][3],[有篇文章][4]介绍了这个轻量级内网DNS，可以尝试一下。
 
 #### *参考资料*
 *[Setting the hostname: FQDN or short name?](http://serverfault.com/questions/331936/setting-the-hostname-fqdn-or-short-name)*
 *[DNS BIND Zone Transfers and Updates](http://www.zytrax.com/books/dns/ch7/xfer.html)*
+
+[1]: http://my.oschina.net/jing31/blog/6613
+[2]: http://blog.csdn.net/demo_deng/article/details/9629177
+[3]: https://github.com/DNSPod/dnspod-sr
+[4]: http://www.ttlsa.com/linux/dnspod-sr-little-dns/
