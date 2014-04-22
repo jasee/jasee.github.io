@@ -34,7 +34,12 @@ disqus:
 # 主题设置，自动激活某个标签
 active: 运维
 
+# 首页除了最新文章外按标签分类显示
+cates:
+  - OpenLDAP
+
 # 中文本地化
 locals:
   tags: 标签
   about: 关于
+  newest: 最新文章
