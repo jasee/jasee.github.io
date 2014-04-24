@@ -153,5 +153,41 @@ sudoUser: %op
 5. 所有principal和keytab都需要重新生成，证书需要重新导入，配置需要重做。
 6. 客户端重新执行一遍更新后的`authconfig`命令即可更新ldap、nslcd等服务的相关配置。
 
+### ssh自动补全
+为了提高易用性，根据ldap的sudoer配置为每个用户做个ssh机器名补全。每个用户登陆后，使用ssh时能直接补全其具有sudo权限的机器列表。
+下面是一个简单的可以工作(仅仅可以工作:-D)的脚本示例：
+
+```sh
+#!/bin/bash
+
+init(){
+    gidNumber=$(ldapsearch "uid=$USER" gidNumber -b "ou=people,dc=opjasee,dc=com" 2>/dev/null | grep -v '^#' | grep '^gidNumber' | awk '{print $2}')
+    userGroup=$(ldapsearch "gidNumber=$gidNumber" cn -b "ou=group,dc=opjasee,dc=com" 2>/dev/null | grep -v '^#' | grep '^cn' | awk '{print $2}')
+    sudoHosts=$(ldapsearch "(|(cn=$USER)(cn=%$userGroup))" sudoHost -b "ou=SUDOers,dc=opjasee,dc=com" 2>/dev/null | grep -v '^#' | grep '^sudoHost' | awk '{print $2}')
+}
+
+main(){
+    init
+    [ -e ~/.myhosts ] && rm ~/.myhosts
+    for h in $sudoHosts; do
+        if [ $h == "ALL" ]; then
+            # 目前手动生成了全量列表放在all_hosts里，也可以考虑从hosts或DNS中定期或实时导出
+            cp /etc/ssh/all_hosts ~/.myhosts
+            return 0
+        fi
+        echo $h >> ~/.myhosts
+    done
+}
+
+main
+```
+
+然后在`/etc/bashrc`中加入:
+
+```sh
+source /etc/ssh/ssh_tab.sh
+complete -W "$(cat ~/.myhosts)" ssh
+```
+
 ### 对现有系统的影响。
 当ldap服务无法使用时，客户端本地用户登陆会出现一定的迟缓，Centos6大概需要10s，而Centos5则需要数分钟。两者重试机制不同，需关注。
