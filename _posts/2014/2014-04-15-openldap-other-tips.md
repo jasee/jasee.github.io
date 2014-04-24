@@ -169,6 +169,7 @@ init(){
 main(){
     init
     [ -e ~/.myhosts ] && rm ~/.myhosts
+    touch ~/.myhosts # 粗暴手段避免本地用户报文件不存在
     for h in $sudoHosts; do
         if [ $h == "ALL" ]; then
             # 目前手动生成了全量列表放在all_hosts里，也可以考虑从hosts或DNS中定期或实时导出

@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Hadoop Kerberos的一个问题
+title: Hadoop多Kerberos冲突
 category: 服务
 description: Hadoop客户端在同时连接两个Kerberos及启用DNS后碰到的问题及绕行方案。
 tags: ["Hadoop","Kerberos","DNS","OpenLDAP"]
