@@ -154,11 +154,15 @@ define service {
     notification_interval   10
     notification_period     24x7
     notification_options    w,u,c,r
-    check_command           check_rabbitmq_queue!mq-server!15672!user!passwd!vhost!queue!1000,900,100!2000,1800,200
+    check_command           check_rabbitmq_queue!mq-server!15672!user!passwd!vhost!queue!1000,900,100,20!2000,1800,200,40
     }
 ```
 
 重新加载Nagios配置观察即可，其他命令脚本更少，添加方式类似。
+
+## 补充
+另外，还可以通过Ganglia插件来采集RabbitMQ数据并使用Nagios进行监控。目前官网Github已经[RabbitMQ插件][7]了，不过连缩进都有问题，不知道怎么提交上去的，不过从[Pull Requests][8]中发现了一个改进版，可以试试使用[这个插件][9]。用这种方式的优点是，不但能够监控异常，还能够可视化地追踪各指标变化情况，当然缺点就是你得先有个Gangli，而且增大了耦合。
+关于如何在Nagios使用Ganglia数据过几天我会另起文章，不过网上也有很多说明了，自己找找。
 
 [1]: https://github.com/jamesc/nagios-plugins-rabbitmq
 [2]: http://www.thegeekstuff.com/2013/12/nagios-plugins-rabbitmq/
@@ -166,3 +170,6 @@ define service {
 [4]: https://www.rabbitmq.com/partitions.html
 [5]: https://www.rabbitmq.com/management.html
 [6]: http://hg.rabbitmq.com/rabbitmq-management/raw-file/rabbitmq_v3_3_0/priv/www/api/index.html
+[7]: https://github.com/ganglia/gmond_python_modules/tree/master/rabbit
+[8]: https://github.com/ganglia/gmond_python_modules/pull/140
+[9]: https://github.com/cburroughs/gmond_python_modules/tree/babbitty/rabbit
