@@ -161,7 +161,7 @@ define service {
 重新加载Nagios配置观察即可，其他命令脚本更少，添加方式类似。
 
 ## 补充
-另外，还可以通过Ganglia插件来采集RabbitMQ数据并使用Nagios进行监控。目前官网Github已经[RabbitMQ插件][7]了，不过连缩进都有问题，不知道怎么提交上去的，不过从[Pull Requests][8]中发现了一个改进版，可以试试使用[这个插件][9]。用这种方式的优点是，不但能够监控异常，还能够可视化地追踪各指标变化情况，当然缺点就是你得先有个Gangli，而且增大了耦合。
+另外，还可以通过Ganglia插件来采集RabbitMQ数据并使用Nagios进行监控。目前官网Github已经[RabbitMQ插件][7]了，不过连缩进都有问题，不知道怎么提交上去的，不过从[Pull Requests][8]中发现了一个改进版，可以试试使用[这个插件][9]。用这种方式的优点是，不但能够监控异常，还能够可视化地追踪各指标变化情况，当然缺点就是你得先有个Ganglia，而且增大了耦合。
 关于如何在Nagios使用Ganglia数据过几天我会另起文章，不过网上也有很多说明了，自己找找。
 
 [1]: https://github.com/jamesc/nagios-plugins-rabbitmq
