@@ -76,6 +76,8 @@ $ActionQueueType LinkedList     # run asynchronously
 $ActionResumeRetryCount 3       # infinite retries if host is down
 local1.info @@tao02.opjasee.com:514
 ### end of the forwarding rule ###
+# 重启rsyslog
+$ service rsyslog restart
 # 新增/etc/profile.d/client.sh，写入
 export PROMPT_COMMAND='{ msg=$(history 1 | { read x y; echo $y; });logger -p local1.info "[euid=$(whoami)][$(who am i)][$(pwd)]:$msg"; }'
 ```
@@ -110,6 +112,8 @@ sudoers:    files ldap
 SYSLOGD_OPTIONS=" -r -x -m 0"
 # 在/etc/syslog.conf中追加一行
 local1.info @tao02.opjasee.com
+# 重启syslog
+$ service syslog restart
 # 新增/etc/profile.d/client.sh，写入
 export PROMPT_COMMAND='{ msg=$(history 1 | { read x y; echo $y; });logger -p local1.info "[euid=$(whoami)][$(who am i)][$(pwd)]:$msg"; }'
 # 另外还需要修改/etc/bashrc，防止其覆盖PROMPT_COMMAND变量，找到case $TERM in语句，在case外面加一个if，如下

@@ -35,8 +35,8 @@ BEGIN failed--compilation aborted at ./check_rabbitmq_server line 12.
 
 ```
 cpan> install Math::Calc::Units
-cpan> instsall Config:Tiny
 cpan> install Config:Tiny
+cpan> install JSON
 ```
 
 然后安装Nagios插件模块：
