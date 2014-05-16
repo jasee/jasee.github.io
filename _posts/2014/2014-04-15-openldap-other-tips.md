@@ -126,6 +126,160 @@ fi
 
 `syslog`使用UDP协议发送远程日志，所以别忘了在日志服务器端打开UDP 514端口进行监听。Centos5在这方面的易用性比Centos6差好多，而且开启日志记录后偶尔有命令卡顿现象。
 
+### Centos5/6客户端部署脚本
+使用脚本确实能大大加快速度，这个脚本安全性一般，我测试了多台服务器没啥问题，使用时需注意自己环境。另外，由于我的环境中还有另外一个Kerberos，因此SSH Service Principal及Keytab生成部分仍手工执行，防止覆盖现有环境。
+
+```sh
+#!/usr/bin/env bash
+
+NORMAL=$(tput sgr0)
+GREEN=$(tput setaf 2)
+YELLOW=$(tput setaf 3)
+RED=$(tput setaf 1; tput bold)
+
+function red() {
+        echo -e "$RED$*$NORMAL"
+}
+
+function green() {
+        echo -e "$GREEN$*$NORMAL"
+}
+
+function yellow() {
+        echo -e "$YELLOW$*$NORMAL"
+}
+
+function get_system_release_info() {
+    local thisSystem
+    if grep 'CentOS release 5' /etc/issue > /dev/null; then
+        thisSystem='CentOS5'
+    elif grep 'CentOS release 6' /etc/issue > /dev/null; then
+        thisSystem='CentOS6'
+    else
+        thisSystem='other'
+    fi
+    echo $thisSystem
+}
+
+function install_on_centos6() {
+    local backupPath="$1"
+    green "***** Enable LDAP on CentOS 6 *****"
+    green "===== Get basic files"
+    wget http://tao02.opjasee.com/ldap/ldapCA.rfc || { red 'Can not get ldapCA.rfc'; exit 1; }
+    wget http://tao02.opjasee.com/ldap/krb5.conf || { red 'Can not get krb5.conf'; exit 1; }
+    wget http://tao02.opjasee.com/ldap/client.sh || { red 'Can not get client.sh'; exit 1; }
+    [ -f /etc/krb5.conf ] && cp /etc/krb5.conf $backupPath
+    cp krb5.conf /etc/
+
+    green "===== Install packages"
+    yum install -y openldap-clients pam_ldap nss-pam-ldapd || { red 'Install error'; exit 1; }
+
+    green "===== Enable LDAP auth"
+    authconfig --savebackup=originConf
+    authconfig --enableldap --enableldapauth --enablekrb5 --enableldaptls --ldapserver="tao02.opjasee.com" --ldapbasedn="dc=opjasee,dc=com" --update || { red 'authconfig error'; exit 1; }
+    rmdir /etc/openldap/cacerts && mv /etc/openldap/certs /etc/openldap/cacerts || { red 'CA dir error'; exit 1; }
+    certutil -d /etc/openldap/cacerts/ -A -a -n 'OpenLDAP Server' -t 'CT' -f /etc/openldap/cacerts/password -i ldapCA.rfc || { red 'Import CA error'; exit 1; }
+    service nslcd restart
+    authconfig --enablemkhomedir --update
+
+    green "===== Config sudo"
+    cp /etc/sudo-ldap.conf $backupPath
+    cp /etc/nsswitch.conf $backupPath
+    cat << EOF >> /etc/sudo-ldap.conf
+uri ldap://tao02.opjasee.com
+sudoers_base ou=SUDOers,dc=opjasee,dc=com
+base dc=opjasee,dc=com
+ssl start_tls
+tls_cacertdir /etc/openldap/cacerts
+EOF
+    echo "sudoers:    files ldap" >> /etc/nsswitch.conf
+
+    green "===== Set log audit"
+    cat << EOF >> /etc/rsyslog.d/client.conf
+### begin forwarding rule ###
+$WorkDirectory /var/lib/rsyslog # where to place spool files
+$ActionQueueFileName fwdRule1   # unique name prefix for spool files
+$ActionQueueMaxDiskSpace 1g     # 1gb space limit (use as much as possible)
+$ActionQueueSaveOnShutdown on   # save messages to disk on shutdown
+$ActionQueueType LinkedList     # run asynchronously
+$ActionResumeRetryCount 3       # infinite retries if host is down
+local1.info @@tao02.opjasee.com:514
+### end of the forwarding rule ###
+EOF
+    service rsyslog restart
+    cat client.sh >> /etc/profile.d/client.sh 
+
+    green "***** Almost OK *****"
+    yellow "Consider of kerberos conflicts, following kerberos cmds shoule be exc manually now"
+    yellow "BE CAREFUL WITH KINIT. DON'T CONVER KERBEROS TGT!"
+    yellow "addprinc -randkey host/${HOSTNAME}.opjasee.com@OPJASEE.COM"
+    yellow "ktadd host/${HOSTNAME}.opjasee.com@OPJASEE.COM"
+}
+
+function install_on_centos5() {
+    local backupPath="$1"
+    green "***** Enable LDAP on CentOS 5 *****"
+    green "===== Get basic files"
+    wget http://tao02.opjasee.com/ldap/ldapCA.rfc || { red 'Can not get ldapCA.rfc'; exit 1; }
+    wget http://tao02.opjasee.com/ldap/krb5.conf || { red 'Can not get krb5.conf'; exit 1; }
+    wget http://tao02.opjasee.com/ldap/client.sh || { red 'Can not get client.sh'; exit 1; }
+    [ -f /etc/krb5.conf ] && cp /etc/krb5.conf $backupPath
+    cp krb5.conf /etc/
+
+    green "===== Install packages"
+    yum install -y openldap-clients krb5-workstation nss_ldap sudo || { red 'Install error'; exit 1; }
+
+    green "===== Enable LDAP auth"
+    authconfig --savebackup=originConf
+    authconfig --enableldap --enableldapauth --enablekrb5 --enableldaptls --ldapserver="tao02.opjasee.com" --ldapbasedn="dc=opjasee,dc=com" --update || { red 'authconfig error'; exit 1; }
+    cp ldapCA.rfc /etc/openldap/cacerts && cacertdir_rehash /etc/openldap/cacerts || { red 'Import CA error'; exit 1; }
+    authconfig --enablemkhomedir --update
+
+    green "===== Config sudo"
+    cp /etc/ldap.conf $backupPath
+    cp /etc/nsswitch.conf $backupPath
+    cat << EOF >> /etc/ldap.conf
+uri ldap://tao02.opjasee.com
+sudoers_base ou=SUDOers,dc=opjasee,dc=com
+base dc=opjasee,dc=com
+ssl start_tls
+tls_cacertdir /etc/openldap/cacerts
+EOF
+    echo "sudoers:    files ldap" >> /etc/nsswitch.conf
+
+    green "===== Set log audit"
+    cp /etc/sysconfig/syslog $backupPath
+    cp /etc/syslog.conf $backupPath
+    sed -i 's/SYSLOGD_OPTIONS="-m 0"/SYSLOGD_OPTIONS=" -r -x -m 0"/' /etc/sysconfig/syslog
+    echo 'local1.info @tao02.opjasee.com' >> /etc/syslog.conf
+    service syslog restart
+    cat client.sh >> /etc/profile.d/client.sh 
+
+    green "***** Almost OK *****"
+    yellow 'You need modify /etc/bashrc(backuped),see https://XXX' # 见本文Centos5客户端安装说明部分
+    cp /etc/bashrc $backupPath
+    yellow "Consider of kerberos conflicts, following kerberos cmds shoule be exc manually now"
+    yellow "BE CAREFUL WITH KINIT. DON'T CONVER KERBEROS TGT!"
+    yellow "addprinc -randkey host/${HOSTNAME}.opjasee.com@OPJASEE.COM"
+    yellow "ktadd host/${HOSTNAME}.opjasee.com@OPJASEE.COM"
+}
+
+[ $EUID = 0 ] || { red 'You shoule be root'; exit 1; }
+workPath=/tmp/ldap.$(date +%Y%m%d)
+backupPath=/tmp/ldap.$(date +%Y%m%d).bak
+[ -d $workPath ] || mkdir -p $workPath
+[ -d $backupPath ] || mkdir -p $backupPath
+cd $workPath
+thisSystem=$(get_system_release_info)
+if [ $thisSystem = 'CentOS5' ]; then
+    install_on_centos5 "$backupPath"
+elif [ $thisSystem = 'CentOS6' ]; then
+    install_on_centos6 "$backupPath"
+else
+    red "Not CentOS5 or CentOS6"
+fi
+```
+
 ### sudo配置风险
 如果服务器本地存在和ldap上同名的用户或用户组，那么本地用户就具有对应ldap用户同样的sudo权限。并且无需经过Kerberos认证即可使用sudo，比较危险，需要注意。
 
@@ -261,6 +415,20 @@ yellow "以上是测试内容。"
 ```
 
 注：`/etc/profile.d/`的脚本输出在`/etc/motd`之后。
+
+### 审计日志切割
+可以通过在`/etc/logrotate.conf`中增加以下配置并重启`rsyslog`来完成。以下配置对`/var/log/client`进行每日切割并保存三年。
+
+```
+/var/log/client {
+    daily
+    create 0600 root root
+    rotate 1095
+    postrotate
+    /bin/kill -HUP `cat /var/run/syslogd.pid 2> /dev/null` 2> /dev/null || true
+    endscript
+}
+```
 
 ### 对现有系统的影响。
 当ldap服务无法使用时，客户端本地用户登陆会出现一定的迟缓，Centos6大概需要10s，而Centos5则需要数分钟。两者重试机制不同，需关注。
