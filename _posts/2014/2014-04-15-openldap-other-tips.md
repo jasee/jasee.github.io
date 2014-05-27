@@ -280,6 +280,76 @@ else
 fi
 ```
 
+### Slave Kerberos
+
+1. 按照之前主的Kerberos安装方法安装Kerberos。
+2. 从主Kerberos上复制以下文件到从机上:
+    * /etc/krb5.conf
+    * /usr/local/kerberos/var/krb5kdc/kdc.conf
+    * /usr/local/kerberos/var/krb5kdc/kadm5.acl
+    * /usr/local/kerberos/var/krb5kdc/.k5.OPJASEE.COM
+3. 主从上增加host principal，参考命令:
+
+    ```
+    addprinc -randkey host/tao01.opjasee.com
+    addprinc -randkey host/tao02.opjasee.com
+    ktadd host/tao01.opjasee.com # tao01上
+    ktadd host/tao02.opjasee.com # tao02上
+    ```
+
+4. 主从上增加`/usr/local/kerberos/var/krb5kdc/kpropd.acl`文件，内含以下内容:
+
+    ```
+    host/tao01.opjasee.com@OPJASEE.COM
+    host/tao02.opjasee.com@OPJASEE.COM
+    ```
+
+    然后在主从上都启动kpropd: `/usr/local/kerberos/sbin/kpropd`
+5. 同步测试，在主上执行以下命令:
+
+    ```sh
+    $ /usr/local/kerberos/sbin/kdb5_util dump /usr/local/kerberos/var/krb5kdc/slave_datatrans
+    $ /usr/local/kerberos/sbin/kprop -f /usr/local/kerberos/var/krb5kdc/slave_datatrans tao02.opjasee.com
+    ```
+
+    返回`SUCCEEDED`就说明OK了。
+
+6. 定时同步，将上面的命令写在脚本里定时调度即可:
+
+    ```sh
+    #!/usr/bin/env bash
+    slaves="tao02.opjasee.com"
+    /usr/local/kerberos/sbin/kdb5_util dump /usr/local/kerberos/var/krb5kdc/slave_datatrans
+
+    for slave in $slaves
+    do
+        /usr/local/kerberos/sbin/kprop -f /usr/local/kerberos/var/krb5kdc/slave_datatrans $slave
+    done
+    ```
+
+    一切没问题后，从机上开启kdc，可以修改krb5.conf进行测试。
+
+### Slave OpenLDAP
+
+1. 与主机一样，使用yum安装OpenLDAP。
+2. 将主机以下文件或目录复制到从机上:
+    * /etc/openldap
+    * /etc/rsyslog.conf
+    * /etc/logrotate.conf
+    * /etc/init.d/slapd
+    * /etc/sysconfig/ldap
+    * /etc/rsyslog.d/server.conf
+
+    需要注意保持权限一致。重启`rsyslog`。
+3. 数据同步。OpenLDAP提供了多种高大上的主从方案来应对复杂场景的需求，但是我们只需要一个冷备即可，因此定期同步`/var/lib/ldap`目录就行了。
+4. 切换步骤:
+    1. 修改DNS，将tao01.opjasee.com指向从机地址。
+    2. 在从机上执行`hostname tao01.opjasee.com`。由于使用了证书等东西，这一步不可缺少。
+    3. 从机上启动slapd。
+    4. 客户端(r)syslog可能需要重启，以便进行操作记录传输。在CentOS 5.4上，syslog需重启才能使用新IP，CentOS 6.3的rsyslog未测试。
+
+以上Kerberos的热备和LDAP的冷备已经足够我们应付主机暂时异常的需求了。不过主机要是再也恢复不了的话，将备机变成主机可能还得进一步调整，忧桑。
+
 ### sudo配置风险
 如果服务器本地存在和ldap上同名的用户或用户组，那么本地用户就具有对应ldap用户同样的sudo权限。并且无需经过Kerberos认证即可使用sudo，比较危险，需要注意。
 
