@@ -138,9 +138,9 @@ $ yum install rabbitmq-server-3.3.1-1.noarch.rpm
         retries             3
         option              redispatch
         maxconn             3000
-        timeout connect     5000
-        timeout client      50000
-        timeout server      50000
+        timeout connect     5s
+        timeout client      1d
+        timeout server      1d
      
     listen rabbitmq_cluster 0.0.0.0:5670
         mode tcp
