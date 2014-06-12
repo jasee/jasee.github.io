@@ -58,7 +58,7 @@ $ docker run -i -t ubuntu /bin/bash
     # 由于容器在执行完一条命令后就会退出，需要写个脚本HOLD住
     [Container]$ vim /home/http-start.sh
     #!/usr/bin/env bash
-    servie httpd start
+    service httpd start
     while true; do
         sleep 1000
     done
@@ -93,16 +93,12 @@ FROM centos:centos6
 MAINTAINER jasee "jaseetao@gmail.com"
 RUN yum install -y httpd
 RUN echo "I come from docker" > /var/www/html/index.html
-RUN echo '#!/usr/bin/env bash' > /home/http-start.sh                      
-RUN echo 'service httpd start' >> /home/http-start.sh
-RUN echo 'while true; do' >> /home/http-start.sh
-RUN echo '    sleep 1000' >> /home/http-start.sh
-RUN echo 'done' >> /home/http-start.sh
+ADD http-start.sh /home/http-start.sh
 EXPOSE 80
 ENTRYPOINT bash /home/http-start.sh
 ```
 
-暂不清楚如何更好的在Dockerfile中构建一个多行文件。如果将写好的文件放到主机本地或者WEB服务器上，可以使用`ADD`命令拷贝。
+其中`ADD`命令可以将本地或URL提供的文件拷贝到容器中。在此例中已经在本地写好`http-start.sh`并放到Dockerfile同一目录下。
 有了Dockerfile之后，就可以使用如下命令建立镜像：
 
 ```sh
