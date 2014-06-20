@@ -448,7 +448,7 @@ $ rabbitmqctl set_policy -p tao ha-tao-all "^" '{"ha-mode":"all","ha-sync-mode":
 # 取消刚才的设定
 $ rabbitmqctl clear_policy -p tao ha-tao-all
 # 对vhost tao中的test队列启用镜像
-$ rabbitmqctl set_policy -p tao ha-tao-test "test '{"ha-mode":"all","ha-sync-mode":"automatic"}'
+$ rabbitmqctl set_policy -p tao ha-tao-test "test" '{"ha-mode":"all","ha-sync-mode":"automatic"}'
 # 后面的设定在此处意义不大，为了性能考虑我们只镜像两个节点，基本不存在增加slave节点的操作。
 ```
 
