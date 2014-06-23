@@ -3,7 +3,7 @@ layout: post
 title: 部署RabbitMQ
 category: 服务
 description: 学习部署一个兼具性能和可用性的RabbitMQ集群。
-tags: ["RabbitMQ", "消息队列", "HAProxy"]
+tags: ["RabbitMQ", "消息队列", "HAProxy", "LVS", "Keepalived"]
 ---
 
 这两天开始看RabbitMQ，目前在使用的环境是之前的老兄搭的，只是起了两个节点做了普通的集群，安装方式也比较奇怪。希望能够整理一下，把剩下的节点加进去，把冗余性提上来。
