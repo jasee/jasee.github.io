@@ -32,8 +32,8 @@ Google一下，发现了一个神奇的东西叫GRO，之前也[有兄弟在这�
 为了能继续愉快的玩耍，不得不含泪把这高级功能禁用掉。我们是做了网卡bonding的，要将实际的网卡都禁用掉：
 
 ```sh
-$ ethtool -K em0 gro off
 $ ethtool -K em1 gro off
+$ ethtool -K em2 gro off
 ```
 
 最好也写在`rc.local`里，防止系统重启后死灰复燃。
