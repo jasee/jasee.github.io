@@ -763,8 +763,8 @@ result: 0 Success
 可以使用`yum install openldap openldap-servers openldap-clients openldap-devel compat-openldap`安装openldap，据说将`/etc/openldap/slap.d`目录移除后可以建立自己的`slapd.conf`配置文件。通过这种方法可以不用修改`/etc/init.d/slpad`脚本，减少对服务的变动。
 
 ### *参考文档*
-*[Integrating LDAP and Kerberos](http://www.linux-mag.com/id/4738/,"Part Two不再标注")*
-*[配置OpenLDAP使用Kerberos验证](http://blog.sina.com.cn/s/blog_5ce87d560100gjhm.html,"主要参考Kerberos配置文件")*
+*[Integrating LDAP and Kerberos](http://www.linux-mag.com/id/4738/)*
+*[配置OpenLDAP使用Kerberos验证](http://blog.sina.com.cn/s/blog_5ce87d560100gjhm.html)*
 *[Kerberos and LDAP](https://help.ubuntu.com/10.04/serverguide/kerberos-ldap.html)*
 *[OpenLDAP Software 2.4 Administrator's Guide](http://www.openldap.org/doc/admin24/OpenLDAP-Admin-Guide.pdf)*
 *[OpenLDAP在LINUX下的安装说明](http://www.cnblogs.com/kungfupanda/archive/2009/12/15/1564555.html)*
