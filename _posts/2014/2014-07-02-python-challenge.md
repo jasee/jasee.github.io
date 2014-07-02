@@ -164,7 +164,7 @@ print z.namelist()
 print z.read('readme.txt')
 ```
 
-压缩包里有一对数字命名的文件和一个'readme.txt'，查看'readme.txt'的内容：
+压缩包里有一堆数字命名的文件和一个'readme.txt'，查看'readme.txt'的内容：
 
 ```
 welcome to my zipped list.
