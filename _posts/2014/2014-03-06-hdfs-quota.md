@@ -22,8 +22,8 @@ $ hadoop dfsadmin -setSpaceQuota N dir1 dir2 ... # 设置大小配额
 $ hadoop dfs -count -q dir1 dir2 ...
 # 查看配额情况，前四个分别是节点配额、剩余节点配额、大小配额，剩余大小配额。
 # 未设置配额的话对应值分别为none和inf
-$ hadoop dfsadmin -clrQuota N dir1 dir2 ... # 取消节点配额限制
-$ hadoop dfsadmin -clrSpaceQuota N dir1 dir2 ... # 取消大小配额限制
+$ hadoop dfsadmin -clrQuota dir1 dir2 ... # 取消节点配额限制
+$ hadoop dfsadmin -clrSpaceQuota dir1 dir2 ... # 取消大小配额限制
 ```
 
 我的测试环境是Hadoop1.2.1，块大小128M，默认复制3份进行冗余。
