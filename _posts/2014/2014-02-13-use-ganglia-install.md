@@ -136,5 +136,33 @@ Ganglia是一个挺好的监控系统，便于编写的插件脚本、灵活的�
 3. 配置gweb
     gweb本身不需要配置，需要配置的是Apache。暂时直接使用`service httpd start`启动服务即可，可以访问`http://gnode01/ganglia`查看ganglia数据。
 
+### 使用rrdcached降低磁盘压力
+在Ganglia采集近2万个数据时，gmetad所在的老服务器磁盘IO基本一直跑满，此时使用rrdcached进行缓存能显著降低磁盘压力。
+
+rrdcached的示例配置如下:
+
+```
+RUN_RRDCACHED=1
+RRDCACHED_USER="root"
+OPTS="-s apache -b /work/data/ganglia/rrds/ -w 300 -z 300"
+PIDFILE="/var/run/rrdcached/rrdcached.pid"
+SOCKFILE="/var/run/rrdcached/rrdcached.sock"
+SOCKPERMS=0660
+```
+
+同时需要在gmetad的启动脚本(`/etc/init.d/gmetad`)中加入:
+
+```sh
+export RRDCACHED_ADDRESS=unix:/var/run/rrdcached/rrdcached.sock
+```
+
+在gweb的配置(`conf.php`)中加入:
+
+```php
+$conf['rrdcached_socket'] = "unix:/var/run/rrdcached/rrdcached.sock";
+```
+
+重启gmetad。这时，不会每更新一个数据就打开、写入、关闭rrd文件一次，而是先写入缓存，每300s才写一次文件(由于配置了`-z 300`，这些rrd文件的写入将会随机分散，避免同时写入数万个文件)。访问gweb的时候，也会从缓存中抽取还未写入rrd文件的数据进行展示。
+
 [1]: http://fedoraproject.org/wiki/EPEL
 [2]: http://sourceforge.net/projects/ganglia/files/ganglia-web/
