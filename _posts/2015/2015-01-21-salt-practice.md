@@ -18,6 +18,27 @@ tags: ["Salt"]
 
 这个目标还是很简单的，刚好也能够把Grains/Pillar/State/Template/Schedule这些最基础的内容都包含进去，动手实践一下还是能增加理解的。主要参考了《Python自动化运维》的第十章。
 
+先贴一下最后的目录结构吧：
+
+```
+/srv/
+├── pillar
+│   ├── lb_server.sls
+│   ├── node_server.sls
+│   ├── schedule.sls
+│   └── top.sls
+└── salt
+    ├── data.sls
+    ├── _grains
+    │   └── nginx_grains.py
+    ├── nginx
+    │   ├── index.html
+    │   ├── lb.conf
+    │   └── node.conf
+    ├── nginx.sls
+    └── top.sls
+```
+
 ### 服务器分组
 配置`/etc/salt/master`，将服务器分为LB和NODE两组，前者使用Nginx进行负载均衡，后者使用Nginx提供WEB服务。修改后最好重启一次salt-master，在我的测试环境里，不重启时Targeting中生效，但Pillar中不可用。
 
