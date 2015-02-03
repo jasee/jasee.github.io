@@ -65,5 +65,5 @@ Gweb的权限管理是挺简陋的，在面包屑导航部分，不管是否具�
 *[ganglia-web-2/AuthSystem][2]*
 
 
-[1]: /2014/02/13/use-ganglia-install/
+[1]: /2014/02/13/use-ganglia-install.html
 [2]: http://sourceforge.net/apps/trac/ganglia/wiki/ganglia-web-2/AuthSystem

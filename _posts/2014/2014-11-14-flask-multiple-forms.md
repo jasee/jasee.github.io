@@ -67,4 +67,4 @@ def index():
 这段代码的单元测试参考[下一篇文章][2]。
 
 [1]: http://v3.bootcss.com/javascript/#collapse-examples
-[2]: /2014/11/15/flask-invitation-only-user-management
+[2]: /2014/11/15/flask-invitation-only-user-management.html

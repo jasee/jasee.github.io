@@ -8,7 +8,7 @@ tags: ["Kerberos","LDAP","OpenLDAP","TLS"]
 
 ### 说明
 
-如果一件事情做的很牵强，要么就不应该做，要么就是做的方式有问题。之前的博文[安装kerberos化的openldap](/2013/12/10/install-kerberized-ldap/)显然属于后者，本次力争使用一种顺其自然的方式重新安装。由于上篇博文一些探索性的记录尚有价值，也就没有直接更换，另起本篇进行记录。
+如果一件事情做的很牵强，要么就不应该做，要么就是做的方式有问题。之前的博文[安装kerberos化的openldap](/2013/12/10/install-kerberized-ldap.html)显然属于后者，本次力争使用一种顺其自然的方式重新安装。由于上篇博文一些探索性的记录尚有价值，也就没有直接更换，另起本篇进行记录。
 安装环境及规划:
 tao0[1-4].opjasee.com，系统为Centos6.3。
 tao01.opjasee.com: 本次安装Kerberos

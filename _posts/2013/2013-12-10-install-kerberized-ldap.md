@@ -7,8 +7,8 @@ tags: ["Kerberos","OpenLDAP","TLS"]
 ---
 
 ### 说明
-[统一认证平台(一):安装kerberos化的openldap](/2013/12/10/install-kerberized-ldap/)
-[统一认证平台(二):使用LDAP及Kerberos进行单点登录](/2013/12/15/sso-with-ldap-and-kerberos/)
+[统一认证平台(一):安装kerberos化的openldap](/2013/12/10/install-kerberized-ldap.html)
+[统一认证平台(二):使用LDAP及Kerberos进行单点登录](/2013/12/15/sso-with-ldap-and-kerberos.html)
 
 本文记录了kerberos及openldap的安装过程，openldap使用kerberos及TLS。
 tao01-04，系统为Centos6.3，已完成hosts映射及root账号信任关系。

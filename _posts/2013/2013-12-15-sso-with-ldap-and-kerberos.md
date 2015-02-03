@@ -7,8 +7,8 @@ tags: ["Kerberos","LDAP","SSH","NFS","单点登录","SSO"]
 ---
 
 ### 说明
-[统一认证平台(一):安装kerberos化的openldap](/2013/12/10/install-kerberized-ldap/)
-[统一认证平台(二):使用LDAP及Kerberos进行单点登录](/2013/12/15/sso-with-ldap-and-kerberos/)
+[统一认证平台(一):安装kerberos化的openldap](/2013/12/10/install-kerberized-ldap.html)
+[统一认证平台(二):使用LDAP及Kerberos进行单点登录](/2013/12/15/sso-with-ldap-and-kerberos.html)
 
 本文记录`tao03`允许使用Kerberos及LDAP进行认证及登录的配置过程，包括建立NFS存放用户家目录，并配置SSH进行单点登录。
 tao01-04，系统为Centos6.3，已完成kerberized ldap搭建。

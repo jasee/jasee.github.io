@@ -48,5 +48,5 @@ ip  shortname
 上面的两个问题只是Hadoop客户端上的，从这个架势来看，Hadoop集群上想使用LDAP特别是DNS是不可能了，只能等待机会整个迁移到新Kerberos。
 
 
-[1]: /2014/03/01/openldap-install
-[2]: /2014/04/21/start-use-dns
+[1]: /2014/03/01/openldap-install.html
+[2]: /2014/04/21/start-use-dns.html

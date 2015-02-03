@@ -8,7 +8,7 @@ tags: ["Kerberos","OpenLDAP","SSH","NFS","单点登录","SSO"]
 
 ### 说明
 
-由于[重新安装了OpenLDAP](/2014/03/01/openldap-install/)，本篇博客也重新更新，不过相比于[上一篇](/2013/12/15/sso-with-ldap-and-kerberos/)内容上变化不大，就当精简格式了。
+由于[重新安装了OpenLDAP](/2014/03/01/openldap-install.html)，本篇博客也重新更新，不过相比于[上一篇](/2013/12/15/sso-with-ldap-and-kerberos.html)内容上变化不大，就当精简格式了。
 上篇博文中，我们已经安装了一个Kerberized OpenLDAP，本篇主要说明如何使用OpenLDAP进行登陆认证并进行用户目录及票据转发的简单配置。
 安装环境及规划:
 tao0[1-4].opjasee.com，系统为Centos6.3。
