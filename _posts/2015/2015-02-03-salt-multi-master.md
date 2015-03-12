@@ -87,7 +87,8 @@ file_ignore_glob:
 
 如果这个问题暂时不能解决，那么要么关闭备master，将其做成冷备；要么重启所有minion后直接在备master上执行`highstate`自废武功，以便主master能保持正常，经测试，在这种情况下，如果主master异常，重启所有minion后，备master执行`highstate`是不会引发问题的，可以暂用这个方案。感觉多master存活时，`highstate`将使minion只与一个master正常连接。
 
-*后续：后来使用了ZeroMQ4就没有出现此问题了。*
+### 又一个问题
+在双master的情况下，使用`-G`或`-I`进行Targeting的话，不匹配的机器也会出现在结果中，返回`Minion did not return. [No response]`。虽然这些不匹配的节点并未执行操作，但是这种输出挺烦的。没办法，暂时用冷备吧。
 
 另外Salt丢节点默认也没个提示，暂时先`alias salt='salt -v'`吧。
 
