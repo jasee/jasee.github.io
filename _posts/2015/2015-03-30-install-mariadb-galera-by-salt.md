@@ -1,0 +1,363 @@
+---
+layout: post
+title: 使用Saltstack安装Mariadb Galera Cluster
+category: 数据库
+description: 通过Saltstack安装MariaDB Galera Cluster并进行初始化
+tags: ["MySQL", "MariaDB", "Galera Cluster", "Saltstack"]
+---
+
+在过去几年里，我一直没有仔细学习过数据库运维，一方面是因为是组内有专门的DBA负责，我应该把精力花在没人管的地方；另一方面也是数据库是运维里非常重要的一个分支，基本自成体系，沉没成本较大。最近机缘巧合，准备接管数据库，借着这个机会系统的学习一下如何进行数据库运维。
+
+由于MySQL被收购后，存在闭源的风险，加之CentOS7等Linux发行版默认都是用MariaDB替换MySQL，所以我也没太犹豫，准备后续都是用MariaDB。为了更方便的进行数据库运维，选定了MariaDB Galera Cluster进行安装测试。(有了Saltstack之后，我发现写博客的必要性都降低了，之前很大程度上是为了做个记录，后续参考使用，但是通过Saltstack安装后，看看SLS就行了`^_^`)
+
+### SLS目录结构
+首先看一下SLS的目录结构吧。这参考了[上篇文章][1]所介绍的MySQL范例的一些内容，不过还差不少，比如没有完全的模块化，只是把简单的拆成了几个小文件，串行`Include`，不过第一个项目能写成这样我也知足啦。
+
+```text
+mariadb_galera
+├── config.sls      # 生成my.cnf、数据目录和设定iptables
+├── defaults.yaml   # 定义不同环境下的变量
+├── files
+│   └── centos6
+│       └── my.cnf  # my.cnf模板
+├── init.sls        # 调用入口
+├── server.sls      # MariaDB Galera Cluster及相关依赖包安装
+└── service.sls     # 服务启动及数据库、账号初始化
+```
+
+### 通过Pillar定义好集群节点和账号信息
+
+* `top.sls`:
+
+    ```yaml
+    base:
+      'db0[1-3]\.opjasee\.com':               # Pillar中包含初始root密码等非常敏感的信息
+        - match: pcre                         # 因此要做好防护，只有集群节点能访问
+        - mariadb_galera.cluster01            # 另外Gitlab权限也需要多加注意
+    ```
+* `mariadb_galera/cluster01.sls`:
+
+    ```yaml
+    mariadb:                                  # 这部分定义了集群基本信息
+      server:                                 # 主要用于生成配置
+        root_password: hardpasswd             # 初始化账号
+      galera:                                 # 以及设定iptables
+        name: galera01
+        sst_user: sst
+        sst_password: hardpasswd
+        nodes:
+          db01.opjasee.com: 172.16.100.101
+          db02.opjasee.com: 172.16.100.102
+          db03.opjasee.com: 172.16.100.103
+    ```
+
+### 定义不同环境的变量
+
+* `defaults.yaml`:
+
+    ```yaml
+    {% raw %}
+    {% load_yaml as rawmap %}
+    '6':                              # 我们目前不太可能会使用CentOS之外的发行版
+      server: MariaDB-Galera-server   # 但会一直跟进CentOS的更新
+      client: MariaDB-client          # 因此以版本号作为不同环境的key
+      galera: galera                  # 目前尚未使用CentOS7，因此只有'6'一个配置
+      old:                            # 根据版本号变化的可能有老版本MySQL包名
+        mysql: mysql                  # 和MariaDB仓库配置、MariaDB模板等
+        server: mysql-server
+        mysql_libs: mysql-libs
+      repo:
+        filename: MariaDB
+        baseurl: http://yum.mariadb.org/10.0.17/centos6-amd64/
+        gpgkey: https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+      source_config: salt://mariadb_galera/files/centos6/my.cnf
+      mariadb_config: /etc/my.cnf
+    {% endload %}
+    {% endraw %}
+    ```
+
+### 安装相关服务
+
+* `server.sls`:
+
+    ```yaml
+    {% raw %}
+    {% from "mariadb_galera/defaults.yaml" import rawmap with context %}
+    {%- set mariadb = salt['grains.filter_by'](rawmap, grain='osmajorrelease') %}
+
+    mariadb_repo:
+      pkgrepo.managed:
+        - comments:
+          - '# Managed by Saltstack'
+        - humanname: {{ mariadb.repo.filename }}
+        - name: MariaDB
+        - baseurl: {{ mariadb.repo.baseurl }}
+        - gpgkey: {{ mariadb.repo.gpgkey }}
+        - gpgcheck: 1
+
+    percona_repo:
+      cmd.run:
+        - name: yum install -y http://www.percona.com/downloads/percona-release/redhat/0.1-3/percona-release-0.1-3.noarch.rpm
+        - unless: ls /etc/yum.repos.d/percona-release.repo
+
+    epel:                                  # 使用xtrabackup进行SST需要socat进行流传输，socat在EPEL仓库里
+      pkg.installed:
+        - name: epel-release
+
+    mysql_old:                             # 删除老的MySQL，否则安装MariaDB时会冲突
+      pkg.removed:
+        - pkgs:
+          - {{ mariadb.old.mysql }}
+          - {{ mariadb.old.server }}
+          - {{ mariadb.old.mysql_libs }}
+
+    mariadb_server:
+      pkg.installed:
+        - pkgs:
+          - {{ mariadb.server }}
+          - {{ mariadb.client }}
+          - {{ mariadb.galera }}
+        - require:
+          - pkg: mysql_old
+          - pkgrepo: mariadb_repo
+
+    percona_xtrabackup:                    # 使用xtrabackup进行SST需要安装percona-xtrabackup
+      pkg.installed:                       # 这种SST方法的流程如下:
+        - name: percona-xtrabackup         # Donor使用innobackupex备份数据库文件并通过socat传输到joiner
+        - require:                         # joiner收到数据后，使用innobackupex进行文件恢复
+          - cmd: percona_repo              # 之后启动MariaDB
+          - pkg: mariadb_server
+
+    socat:
+      pkg.installed:
+        - name: socat
+        - require:
+          - pkg: epel
+          - pkg: mariadb_server
+
+    restore_pkgs:                          # 卸载mysql-libs时会同时卸载sysstat和crontabs
+      pkg.installed:                       # 安装完MariaDB后需要恢复
+        - pkgs:
+          - crontabs
+          - sysstat
+        - require:
+          - pkg: mariadb_server
+      service.running:
+        - name: crond
+        - enable: True
+    {% endraw %}
+    ```
+
+### 进行相关配置
+* 首先看一下`files/centos6/my.cnf`模板：
+
+    ```yaml
+    {% raw %}
+    # DO NOT CHANGE THIS FILE!
+    # This config is generated by SALTSTACK
+    # and all change will be overrided on next salt call
+    {%- set galera_name = salt['pillar.get']('mariadb:galera:name', 'galera01') -%}
+    {%- set ipaddresses = salt['pillar.get']('mariadb:galera:nodes', {}).values() -%}
+    {%- set ipaddresses = ",".join(ipaddresses) -%}
+    {%- set node_ip = salt['network.ipaddrs']('bond0')[0] -%}
+    {%- set server_id = node_ip.split('.')[3]|int -%}
+    {%- set sst_user = salt['pillar.get']('mariadb:galera:sst_user', 'sst') -%}
+    {%- set sst_password = salt['pillar.get']('mariadb:galera:sst_password', 'notset') %}
+
+    [client]
+    port= 3306
+    socket= /work/mysql/mysql.sock
+
+    # 此处省略mysqldump等配置
+
+    [mysqld]
+    port        = 3306
+    socket      = /work/mysql/mysql.sock
+    datadir = /work/mysql/data                        # 使用xtrabackup进行SST时必须配置datadir
+    log_bin = /work/mysql/data/mysql-bin              # 并且binlog必须也存在datadir下
+    log-bin-index = /work/mysql/data/mysql-bin.index  # 因为xtrabackup不会处理datadir以外的目录
+    server_id = {{ server_id }}                       # server_id直接用ip尾段定义
+
+    # 此处省略各种参数及见仁见智的配置
+
+    [galera]
+    wsrep_provider=/usr/lib64/galera/libgalera_smm.so
+    wsrep_provider_options="gcache.size=4G"           # 为了增大IST窗口，这个值最好设置大一点，write set的增长速度可参考binlog
+    wsrep_cluster_address="gcomm://{{ ipaddresses }}" # 把所有节点的ip都配上，不过本机ip会自动被忽略(blacklisted)
+    wsrep_cluster_name={{ galera_name }}
+    wsrep_sst_method=xtrabackup-v2                    # 大部分是使用rsync，不过xtrabackup不会block donor，两者速度都很快
+    wsrep_sst_auth={{ sst_user }}:{{ sst_password }}  # 使用rsync时不需要配置，使用mysqldump和xtrabackup时需要
+    wsrep_node_address={{ node_ip }}                  #   不过这个只是donor备份使用，并不能用于joiner验证，说明见下面iptables配置部分
+    wsrep_node_name="{{ grains['fqdn'] }}"
+    binlog_format=row                                 # Galera Cluster里binglog各式只能是row
+    default_storage_engine=InnoDB                     # Galera不支持非事务型引擎
+    innodb_autoinc_lock_mode=2                        # Galera Cluster里该参数只能是2
+    wsrep_slave_threads=4
+    {% endraw %}
+    ```
+* `config.sls`:
+
+    ```yaml
+    {% raw %}
+    {% from "mariadb_galera/defaults.yaml" import rawmap with context %}
+    {%- set mariadb = salt['grains.filter_by'](rawmap, grain='osmajorrelease') %}
+    {% set cluster_ips = salt['pillar.get']('mariadb:galera:nodes', {}).values() %}
+
+    include:
+      - mariadb_galera.server
+
+    mariadb_config:
+      file.managed:
+        - source: {{ mariadb.source_config }}
+        - name: {{ mariadb.mariadb_config }}
+        - user: root
+        - group: root
+        - mode: 644
+        - template: jinja
+        - require:
+          - pkg: mariadb_server
+
+    mariadb_dir:
+      file.directory:
+        - name: /work/mysql
+        - makedirs: True
+        - user: mysql
+        - group: mysql
+        - dir_mode: 700
+        - require_in:
+          - file: mariadb_config
+
+    {% for subdir in ['data', 'log', 'tmp'] %} # MySQL为什么不自动创建缺失的目录呢
+    mariadb_subdirs_{{ subdir }}:
+      file.directory:
+        - name: /work/mysql/{{ subdir }}
+        - makedirs: True
+        - user: mysql
+        - group: mysql
+        - dir_mode: 755
+        - require_in:
+          - file: mariadb_config
+    {% endfor %}
+
+    {% for ip in cluster_ips %}                # 不知道为什么，好像很少人关心SST的安全问题
+    iptables_allow_{{ loop.index }}:           # 可能有些人误以为wsrep_sst_auth是新节点请求SST的"钥匙"
+      iptables.insert:                         # 实际上，rsync方法根本不需要该配置
+        - position: 1                          # 在xtrabackup中，这也只是donor自身用于连接数据库导出数据的
+        - table: filter                        # 虽然在mysqldump中号称这个密码同时用于donor和joiner
+        - chain: INPUT                         # 但实际上joiner可能是别人完全控制的
+        - dport: 4567                          # 目前没有合理的认证方法
+        - source: {{ ip }}                     # 任何能连通数据库主机的节点都可以通过SST获取数据库所有数据
+        - proto: tcp                           # https://mariadb.atlassian.net/browse/MDEV-6385
+        - jump: ACCEPT                         # 暂时只能通过防火墙解决，只允许集群内节点连通4567端口
+        - save: True                           # 其他节点无法通过该端口发起SST请求
+    {% endfor %}                               # SST数据传输默认通过4444端口，禁用该端口应该也可以
+                                               # 但是禁用4567会更彻底，虽然可能有很低的性能损耗
+    iptables_deny:                             # 不过Saltstack目前的iptables模块也有问题
+      iptables.append:                         # 会重复添加相同的规则
+        - table: filter                        # 目前应该已有修复方案但尚未更新到rpm中
+        - chain: INPUT                         # https://raw.githubusercontent.com/saltstack/salt/develop/salt/modules/iptables.py
+        - dport: 4567
+        - proto: tcp
+        - jump: DROP
+        - save: True
+    {% endraw %}
+    ```
+
+### 启动服务并初始化账号
+
+* `service.sls`:
+
+    ```yaml
+    {% raw %}
+    {% from "mariadb_galera/defaults.yaml" import rawmap with context %}
+    {%- set mariadb = salt['grains.filter_by'](rawmap, grain='osmajorrelease') %}
+    {% set galera_status = salt['grains.get']('galera_status', None) %}
+    {% set root_password = salt['pillar.get']('mariadb:server:root_password', 'notset') %}
+    {% set sst_user = salt['pillar.get']('mariadb:galera:sst_user', 'sst') %}
+    {% set sst_password = salt['pillar.get']('mariadb:galera:sst_password', 'notset') %}
+
+    include:
+      - mariadb_galera.config
+
+    {% if galera_status == 'new' %}             # Galera Cluster启动的主要问题是，第一个节点需要使用bootstrap启动
+    del_galera_status:                          # 并且需要执行mysql_install_db来生成系统库
+      grains.absent:                            # 剩下的所有节点直接start即可
+        - name: galera_status                   # 因此使用一个grains标志位来区分这两种角色
+        - destructive: True                     # 第一个节点启动时删除该标志
+
+    install_db:
+      cmd.run:
+        - name: mysql_install_db --user=mysql
+        - unless: ls /work/mysql/data/mysql     # 虽然不应该出现执行两次mysql_install_db的情况
+        - require:                              # 但多增加点约束肯定没坏处
+          - pkg: mariadb_server
+          - file: mariadb_config
+          - grains: del_galera_status
+
+    start_wsrep:
+      cmd.run:
+        - name: service mysql bootstrap
+        - require:
+          - pkg: mariadb_server
+          - pkg: percona_xtrabackup
+          - pkg: socat
+          - file: mariadb_config
+          - cmd: install_db
+
+    mariadb_root_password:                      # 设定root初始化密码，服务器启动后此密码最好修改一下
+      cmd.run:
+        - name: mysqladmin -u root password '{{ root_password|replace("'", "'\"'\"'") }}'
+        - onlyif: mysql -u root -e "SELECT 1;"
+        - require:
+          - cmd: start_wsrep
+
+    {% for host in ['127.0.0.1', '::1', salt['grains.get']('host')] %}
+    mariadb_root_password_{{ loop.index }}:
+      cmd.run:
+        - name: mysql -u root --password={{ root_password|replace("'", "'\"'\"'") }} -e "SET PASSWORD FOR 'root'@'{{ host }}' = PASSWORD('{{ root_password|replace("'", "'\"'\"'") }}');"
+        - require:
+          - cmd: mariadb_root_password
+    {% endfor %}
+
+    {% for host in ['localhost', salt['grains.get']('host')] %}
+    mariadb_delete_anonymous_user_{{ loop.index }}:
+      cmd.run:                                  # 听说删除匿名用户比较安全
+        - name: mysql -u root --password={{ root_password|replace("'", "'\"'\"'") }} -e "DROP USER ''@'{{ host }}' ;"
+        - require:
+          - cmd: mariadb_root_password
+    {% endfor %}
+
+    user_sst:                                   # 启动后修改sst密码还没测试过，不过预计作为donor执行innobackupex会异常
+      cmd.run:                                  # 这些权限应该够了
+        - name: mysql -u root --password={{ root_password|replace("'", "'\"'\"'") }} -e "GRANT RELOAD, LOCK TABLES, REPLICATION CLIENT, CREATE TABLESPACE, SUPER ON *.* TO '{{ sst_user }}'@'localhost' IDENTIFIED BY '{{ sst_password|replace("'", "'\"'\"'") }}';"
+        - require:
+          - cmd: mariadb_root_password
+    {% else %}
+    mariadb_service:
+      service.running:
+        - name: mysql
+        - require:
+          - pkg: mariadb_server
+          - pkg: percona_xtrabackup
+          - pkg: socat
+          - file: mariadb_config
+    {% endif %}
+    {% endraw %}
+    ```
+
+### 使用及一些问题
+
+* 目前可通过三条命令完成MariaDB Galera Cluster的搭建及初始化：
+
+    ```sh
+    $ salt 'db01.opjasee.com' grains.setval galera_status new
+    $ salt 'db01.opjasee.com' state.sls mariadb_galera
+    $ salt -E 'db0[23].opjasee.com' state.sls mariadb_galera
+    ```
+* 不过如果整个Galera Cluster重启，是不能直接highstate的，因为第一个启动的节点依然需要使用`bootstrap`启动。
+* 如果新增一个节点，需要在整个集群中增加相应的iptables规则，不过由于目前Saltstack的iptables模块有问题，会造成重复添加，也需要注意下。
+
+另外，Severalnines提供了[CLUSTERCONTROL][2]，可以图形化的完成Galera Cluster的部署，有兴趣的可以试试。
+
+[1]: /2015/02/06/salt-state-design.html
+[2]: http://www.severalnines.com/product/clustercontrol
