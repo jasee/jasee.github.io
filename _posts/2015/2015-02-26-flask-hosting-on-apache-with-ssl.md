@@ -29,7 +29,7 @@ mod_wsgi模块通过执行指定的`.wsgi`文件获取app对象，在我的环�
 activate_this = '/home/op/.virtualenvs/adop/bin/activate_this.py'
 execfile(activate_this, dict(__file__=activate_this))
 import sys
-sys.path.insert(0, '/opt/local/apache2/docs/adop.opjasee.com')
+sys.path.insert(0, '/var/www/adop.adsage.com')
 # 虽然我用了flask Manager模块管理app，但是此处还是要直接导入app而不是manager对象
 from manage import app as application
 ```
