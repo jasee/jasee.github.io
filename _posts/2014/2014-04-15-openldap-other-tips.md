@@ -487,7 +487,7 @@ yellow "以上是测试内容。"
 注：`/etc/profile.d/`的脚本输出在`/etc/motd`之后。
 
 ### 审计日志切割
-可以通过在`/etc/logrotate.conf`中增加以下配置并重启`rsyslog`来完成。以下配置对`/var/log/client`进行每日切割并保存三年。
+可以通过在`/etc/logrotate.conf`中增加以下配置来完成。以下配置对`/var/log/client`进行每日切割并保存三年。
 
 ```
 /var/log/client {
@@ -499,6 +499,8 @@ yellow "以上是测试内容。"
     endscript
 }
 ```
+
+另外，`/var/log/slapd.log`也最好加到`/etc/logrotate.d/syslog`中，避免时间久了后变得太大。
 
 ### 对现有系统的影响。
 当ldap服务无法使用时，客户端本地用户登陆会出现一定的迟缓，Centos6大概需要10s，而Centos5则需要数分钟。两者重试机制不同，需关注。
