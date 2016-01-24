@@ -12,6 +12,10 @@ tags: ["OpenLDAP","Kerberos","SSH"]
 我们采用的方法是，通过配置系统对OpenLDAP的查询进行过滤，就可以限定只允许某些用户或用户组登陆，其他用户在这个系统中相当于不存在。CentOS5和CentOS6的过滤方法略有不同，CentOS7与CentOS6基本一样。直接贴脚本吧，仅供参考。
 
 ```sh
+function get_gid() {
+    ldapsearch -x gidNumber -b "cn=$1,ou=group,dc=opjasee,dc=com" 2>/dev/null | grep "^gidNumber" | awk '{print $2}'
+}
+
 function filter_on_centos5() {
     #samples:
     #nss_base_passwd    dc=opjasee,dc=com?sub?gidNumber=1000
