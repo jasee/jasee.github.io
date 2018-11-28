@@ -7,14 +7,14 @@ redcarpet:
 author: 
   name: jasee
   email: jaseetao@gmail.com
-  link: http://opjasee.com
+  link: https://jasee.github.io
   weibo: http://weibo.com/justatree
   github: http://github.com/jasee
 
 # 站点信息
 title: 单线程
 description: 君子生非异也，善假于物也 
-url: http://opjasee.com
+url: https://jasee.github.com
 rss_url: /pages/atom.xml
 
 # gavatar头像及Favicon
@@ -24,7 +24,7 @@ favicon: /public/upload/avatar/favicon.ico
 # google analytics 设置
 ga:
   id: UA-44312631-1
-  url: opjasee.com
+  url: jasee.github.com
 
 # disqus 设置
 disqus:
